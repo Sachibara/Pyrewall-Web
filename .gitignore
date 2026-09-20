@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+
+# Runtime databases
+db/*.db
+db/*.db-*
+db/backups/
+db/first_run.json
+db/.install_complete
+
+# Runtime config / logs
+db/config/settings.json
+logs/
+*.log
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local secrets
+.env
