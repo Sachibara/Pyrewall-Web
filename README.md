@@ -56,6 +56,30 @@ Install the Python dependencies:
 python -m pip install -r requirements-web.txt
 ```
 
+## One-Click Windows Deployment
+
+For a functional local deployment, run:
+
+```text
+install_windows.bat
+```
+
+The installer requests Administrator privileges, installs the Python dependencies, registers a highest-privilege Windows Scheduled Task, starts the production Waitress server, and verifies the health endpoint.
+
+After installation, open:
+
+```text
+http://127.0.0.1:8765
+```
+
+PyreWall Web will start automatically when you log in to Windows. The generated production launcher and persistent Flask session secret stay local and are excluded from Git.
+
+To remove the automatic deployment without deleting source code or databases, run:
+
+```text
+uninstall_windows.bat
+```
+
 ## Run
 
 The easiest option is:
@@ -69,7 +93,7 @@ The launcher requests Administrator privileges and starts the local web console.
 Or run it manually from an elevated PowerShell / Command Prompt:
 
 ```powershell
-python web_app.py
+python production_server.py
 ```
 
 Then open:
