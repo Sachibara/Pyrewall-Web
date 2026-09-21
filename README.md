@@ -80,6 +80,21 @@ To remove the automatic deployment without deleting source code or databases, ru
 uninstall_windows.bat
 ```
 
+## Browser Workspace
+
+The repository now also includes a public **browser-first policy workspace** under `browser/`.
+
+It can be opened directly from GitHub Pages and used without installing Python. Browser Workspace Mode stores domains, blocked IPs, firewall rules, application signatures, settings, and audit history in local browser storage.
+
+The browser workspace is intentionally separated from enforcement:
+
+- browser mode is persistent and directly usable for firewall policy planning and configuration management;
+- real Windows Firewall, WinDivert, ARP discovery, live traffic counters, and packet enforcement still require the local Windows backend running as Administrator.
+
+Public app:
+
+`https://sachibara.github.io/Pyrewall-Web/`
+
 ## Run
 
 The easiest option is:
