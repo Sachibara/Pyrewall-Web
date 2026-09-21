@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#07111f">
+  <meta name="description" content="PyreWall browser workspace for firewall policy planning, rules, signatures, and audit history.">
+  <title>PyreWall Browser Workspace</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand"><div class="shield">P</div><div><strong>PyreWall</strong><span>Browser Workspace</span></div></div>
+    <div class="mode"><i></i><div><strong>Policy workspace</strong><span>Saved locally in this browser</span></div></div>
+    <nav>
+      <button class="nav active" data-page="overview">Overview</button>
+      <button class="nav" data-page="network">Network Control</button>
+      <button class="nav" data-page="rules">Firewall Rules</button>
+      <button class="nav" data-page="signatures">App Signatures</button>
+      <button class="nav" data-page="history">History</button>
+      <button class="nav" data-page="settings">Settings</button>
+    </nav>
+    <div class="local-note"><strong>Real enforcement</strong><p>Windows Firewall + WinDivert actions require the local PyreWall backend running as Administrator.</p></div>
+  </aside>
+
+  <main class="workspace">
+    <header class="topbar">
+      <div><p class="eyebrow" id="pageEyebrow">Firewall policy</p><h1 id="pageTitle">Overview</h1></div>
+      <div class="top-actions">
+        <button class="btn secondary" id="exportBtn">Export workspace</button>
+        <label class="btn secondary import-label">Import<input id="importInput" type="file" accept="application/json"></label>
+        <button class="btn primary" data-go="network">Add policy</button>
+      </div>
+    </header>
+
+    <section class="page active" data-panel="overview">
+      <div class="hero">
+        <div>
+          <p class="eyebrow">Local-first policy console</p>
+          <h2>Build firewall policy in the browser. Enforce it locally when ready.</h2>
+          <p>This public workspace is directly usable for organizing blocked domains, IPs, rules, signatures, and firewall settings. Your changes persist in this browser. Real packet filtering still requires the Windows PyreWall service.</p>
+          <div class="hero-actions"><button class="btn primary" data-go="network">Open controls</button><button class="btn secondary" data-go="settings">Local engine setup</button></div>
+        </div>
+        <div class="engine-card"><span>ENFORCEMENT STATUS</span><strong>Workspace only</strong><small>Connect the local Windows backend for WinDivert enforcement.</small><div class="engine-line"><i></i><span>Browser policy</span><b>Ready</b></div><div class="engine-line muted"><i></i><span>WinDivert</span><b>Local only</b></div></div>
+      </div>
+
+      <div class="stats">
+        <article><span>Blocked domains</span><strong id="statDomains">0</strong><small>DNS / SNI policy</small></article>
+        <article><span>Blocked IPs</span><strong id="statIps">0</strong><small>Manual address policy</small></article>
+        <article><span>Firewall rules</span><strong id="statRules">0</strong><small>IP / port / protocol</small></article>
+        <article><span>App signatures</span><strong id="statSigs">0</strong><small>Service patterns</small></article>
+        <article><span>Audit events</span><strong id="statHistory">0</strong><small>Workspace activity</small></article>
+      </div>
+
+      <div class="grid-2">
+        <article class="panel"><div class="panel-head"><div><p class="eyebrow">Policy summary</p><h3>Recent rules</h3></div><button class="link-btn" data-go="rules">Manage</button></div><div id="recentRules" class="list"></div></article>
+        <article class="panel"><div class="panel-head"><div><p class="eyebrow">Activity</p><h3>Recent changes</h3></div><button class="link-btn" data-go="history">View all</button></div><div id="recentHistory" class="list"></div></article>
+      </div>
+    </section>
+
+    <section class="page" data-panel="network">
+      <div class="section-head"><div><p class="eyebrow">Network control</p><h2>Domains & IP addresses</h2><p>Maintain browser-persistent block lists before applying them through the local Windows engine.</p></div></div>
+      <div class="grid-2">
+        <article class="panel">
+          <div class="panel-head"><div><h3>Blocked domains</h3><p>Domain policy for DNS/SNI/HTTP-host enforcement.</p></div></div>
+          <form id="domainForm" class="inline-form"><input id="domainInput" placeholder="example.com" required><button class="btn primary" type="submit">Add domain</button></form>
+          <div id="domainList" class="list"></div>
+        </article>
+        <article class="panel">
+          <div class="panel-head"><div><h3>Blocked IPs</h3><p>Manual destination/source address blocks.</p></div></div>
+          <form id="ipForm" class="inline-form"><input id="ipInput" placeholder="192.168.1.50" required><button class="btn primary" type="submit">Add IP</button></form>
+          <div id="ipList" class="list"></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="page" data-panel="rules">
+      <div class="section-head"><div><p class="eyebrow">Policy management</p><h2>Firewall Rules</h2><p>Create structured IP, port, protocol, and action rules that persist in this browser workspace.</p></div></div>
+      <article class="panel">
+        <form id="ruleForm" class="rule-form">
+          <label><span>Target IP</span><input id="ruleIp" placeholder="10.0.0.10" required></label>
+          <label><span>Port</span><input id="rulePort" placeholder="ANY" value="ANY"></label>
+          <label><span>Protocol</span><select id="ruleProtocol"><option>TCP</option><option>UDP</option><option>ICMP</option><option>ANY</option></select></label>
+          <label><span>Action</span><select id="ruleAction"><option>BLOCK</option><option>ALLOW</option></select></label>
+          <button class="btn primary" type="submit">Add rule</button>
+        </form>
+        <div class="table-wrap"><table><thead><tr><th>ID</th><th>IP</th><th>Port</th><th>Protocol</th><th>Action</th><th></th></tr></thead><tbody id="ruleTable"></tbody></table></div>
+      </article>
+    </section>
+
+    <section class="page" data-panel="signatures">
+      <div class="section-head"><div><p class="eyebrow">Application policy</p><h2>Service Signatures</h2><p>Store administrator-defined host/domain patterns without hardcoded application rules.</p></div></div>
+      <article class="panel">
+        <form id="sigForm" class="sig-form">
+          <input id="sigName" placeholder="Service name" required>
+          <input id="sigHost" placeholder="Host pattern, e.g. *.discord.com">
+          <input id="sigDomain" placeholder="Domain pattern">
+          <input id="sigRange" placeholder="IP range">
+          <select id="sigProtocol"><option>ANY</option><option>TCP</option><option>UDP</option></select>
+          <button class="btn primary" type="submit">Add signature</button>
+        </form>
+        <div class="table-wrap"><table><thead><tr><th>Name</th><th>Host pattern</th><th>Domain</th><th>IP range</th><th>Protocol</th><th></th></tr></thead><tbody id="sigTable"></tbody></table></div>
+      </article>
+    </section>
+
+    <section class="page" data-panel="history">
+      <div class="section-head"><div><p class="eyebrow">Audit trail</p><h2>Workspace History</h2><p>Every local policy edit is recorded in browser storage.</p></div><button class="btn secondary" id="clearHistoryBtn">Clear history</button></div>
+      <article class="panel"><div id="historyList" class="list history-list"></div></article>
+    </section>
+
+    <section class="page" data-panel="settings">
+      <div class="section-head"><div><p class="eyebrow">Configuration</p><h2>Browser & Local Engine</h2><p>Browser settings persist locally. Windows-only enforcement settings become operational when using the local backend.</p></div></div>
+      <div class="grid-2">
+        <article class="panel">
+          <div class="panel-head"><div><h3>Policy settings</h3><p>Saved in this browser workspace.</p></div></div>
+          <label class="toggle-row"><input id="quicToggle" type="checkbox"><span><strong>Disable QUIC policy</strong><small>Plan UDP/443 blocking for SNI visibility.</small></span></label>
+          <label class="toggle-row"><input id="dohToggle" type="checkbox"><span><strong>Block known DoH endpoints</strong><small>Plan DNS-bypass reduction.</small></span></label>
+          <label class="field"><span>Temporary domain-IP TTL (seconds)</span><input id="ttlInput" type="number" min="30" max="86400"></label>
+          <button class="btn primary" id="saveSettingsBtn">Save settings</button>
+        </article>
+        <article class="panel local-engine">
+          <div class="panel-head"><div><h3>Real Windows enforcement</h3><p>Required for actual packet blocking.</p></div></div>
+          <ol>
+            <li>Clone or download the PyreWall Web repository on Windows.</li>
+            <li>Run <code>install_windows.bat</code> as Administrator.</li>
+            <li>Open <code>http://127.0.0.1:8765</code>.</li>
+            <li>Use the local console for WinDivert, Windows Firewall, ARP discovery, and live traffic.</li>
+          </ol>
+          <a class="btn secondary" href="https://github.com/Sachibara/Pyrewall-Web" target="_blank" rel="noopener noreferrer">Open repository</a>
+        </article>
+      </div>
+      <article class="panel danger-zone"><div><h3>Reset browser workspace</h3><p>Restore the public browser workspace to its initial empty state.</p></div><button class="btn danger" id="resetBtn">Reset workspace</button></article>
+    </section>
+  </main>
+</div>
+<div id="toastRegion" class="toast-region"></div>
+</body>
+</html>
