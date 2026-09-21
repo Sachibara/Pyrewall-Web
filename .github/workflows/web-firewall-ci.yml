@@ -17,4 +17,15 @@ jobs:
       - name: Check Python syntax
         run: python -m py_compile web_app.py core/firewall_thread.py
       - name: Check browser JavaScript syntax
-        run: node --check web/static/app.js
+        run: |
+          node --check web/static/app.js
+          node --check browser/app.js
+
+      - name: Validate browser app files
+        run: |
+          test -f browser/index.html
+          test -f browser/styles.css
+          test -f browser/app.js
+          grep -q "localStorage" browser/app.js
+          grep -q "./styles.css" browser/index.html
+          grep -q "./app.js" browser/index.html
