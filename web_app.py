@@ -480,6 +480,16 @@ def logout():
     return redirect(url_for("login"))
 
 
+@app.get("/healthz")
+def healthz():
+    return jsonify({
+        "ok": True,
+        "service": "PyreWall Web",
+        "firewall_running": bool(is_firewall_running()),
+        "firewall_ready": bool(is_firewall_ready()),
+    })
+
+
 @app.get("/")
 @login_required
 def dashboard():
