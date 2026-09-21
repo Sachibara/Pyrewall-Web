@@ -13,5 +13,5 @@ if not "%errorlevel%"=="0" (
 echo Starting PyreWall Web Firewall...
 echo Open http://127.0.0.1:8765 in your browser.
 echo.
-python web_app.py
+python production_server.py
 pause
