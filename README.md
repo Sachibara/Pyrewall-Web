@@ -177,3 +177,31 @@ This repository is dedicated only to the browser-based edition.
 **Jim Rodmark Camus**  
 BSIT — Network Technology  
 GitHub: [@Sachibara](https://github.com/Sachibara)
+
+
+## Unified Security Platform
+
+The public browser workspace has been upgraded from a policy-only planner into the portfolio-facing **PyreWall Unified Security Platform**.
+
+The unified architecture is:
+
+`Browser Control Plane → Local Flask Console → PyreWall Windows Engine → WinDivert / Windows Firewall / ARP / DNS`
+
+The web control plane now combines:
+
+- security overview and calculated posture score
+- connected-device inventory and block/unblock workflows
+- exact/wildcard domain policy
+- manual IP blocking
+- structured firewall rules
+- administrator-defined application/service signatures
+- threat-center events with acknowledge/resolve workflow
+- upload/download traffic visualization
+- protocol mix and destination visibility
+- audit history
+- QUIC, DoH, IP-blocking, and resolved-IP TTL settings
+- import/export for the portfolio workspace
+
+The public website remains safe and browser-local. Real enforcement is performed only by the Windows backend running with the required privileges.
+
+The original PyQt6 desktop repository remains separately maintained and is not replaced by this web control plane.
