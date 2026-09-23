@@ -38,6 +38,7 @@ if "pyrewall" not in sys.modules:
 
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 
+from pyrewall.core.device_identify import lookup_oui
 from pyrewall.core.devices import (
     add_blocked_device,
     detect_devices,
@@ -305,7 +306,7 @@ def security_headers(response):
         "default-src 'self'; "
         "style-src 'self' 'unsafe-inline'; "
         "script-src 'self'; "
-        "img-src 'self' data:; "
+        "img-src 'self' data: https://raw.githubusercontent.com; "
         "connect-src 'self'; "
         "frame-ancestors 'none'"
     )
@@ -676,10 +677,31 @@ def api_devices():
     seen = set()
     for ip, mac in detected:
         seen.add(ip)
-        devices.append({"ip": ip, "mac": mac, "blocked": ip in blocked})
+        vendor = lookup_oui(mac) or "Unknown"
+        v = vendor.upper()
+        if "APPLE" in v:
+            device_type = "iPhone / Mac"
+        elif any(name in v for name in ("SAMSUNG", "XIAOMI", "OPPO", "VIVO", "REALME", "TECNO", "INFINIX", "POCO")):
+            device_type = "Android Phone"
+        else:
+            device_type = "Unknown Device"
+        devices.append({
+            "ip": ip,
+            "mac": mac,
+            "vendor": vendor,
+            "device_type": device_type,
+            "blocked": ip in blocked,
+        })
     for ip, mac in blocked.items():
         if ip not in seen:
-            devices.append({"ip": ip, "mac": mac, "blocked": True})
+            vendor = lookup_oui(mac) or "Unknown"
+            devices.append({
+                "ip": ip,
+                "mac": mac,
+                "vendor": vendor,
+                "device_type": "Unknown Device",
+                "blocked": True,
+            })
     return ok(devices=devices)
 
 
