@@ -1,7 +1,7 @@
 :root{
   --bg:#f3f4f6;--panel:#fff;--line:#d9dde3;--text:#101317;--muted:#53626a;
   --blue:#0078d7;--blue-deep:#0b2f6b;--green:#28a745;--amber:#ffc107;--red:#dc3545;--tab:#e7e7e7;
-  --shadow:0 3px 10px rgba(16,19,23,.07)
+  --shadow:0 3px 10px rgba(16,19,23,.07);--accent:#28a745;--accent2:#0078d7;--border:#d9dde3
 }
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--text);background:var(--bg)}
