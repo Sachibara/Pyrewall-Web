@@ -6,6 +6,7 @@
   const isAdmin = role === "admin";
   let activePage = "overview";
   const trafficHistory = { up: [], down: [] };
+  const selectedDomains = new Set();
 
   const $ = (id) => document.getElementById(id);
   const qsa = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -145,6 +146,17 @@
     $("statRules").textContent = counts.rules;
     $("statSignatures").textContent = counts.signatures;
     $("statThreats").textContent = counts.threats;
+    if ($("statUsers")) $("statUsers").textContent = counts.users;
+
+    try {
+      const recent = await api("/api/history?limit=12");
+      const body = $("overviewHistoryBody");
+      if (body) {
+        body.innerHTML = recent.history.length ? recent.history.map((item) =>
+          "<tr><td>" + (item.timestamp || "—") + "</td><td>" + (item.action || "—") + "</td><td>" + (item.description || "—") + "</td></tr>"
+        ).join("") : '<tr><td colspan="3">No history entries.</td></tr>';
+      }
+    } catch (_) {}
 
     $("hostName").textContent = fw.hostname;
     $("hostPlatform").textContent = fw.platform;
@@ -160,7 +172,8 @@
     orb.classList.remove("active");
 
     if (fw.ready) {
-      $("engineState").textContent = "Firewall active";
+      $("engineState").textContent = "Status: 🟢 Running";
+      $("engineState").className = "status-label running";
       $("engineDetail").textContent = "WinDivert is open and the packet filter is actively enforcing PyreWall policy.";
       $("sidebarStatus").textContent = "Firewall active";
       $("sidebarReady").textContent = "WinDivert ready";
@@ -169,7 +182,8 @@
       dot.classList.add("online");
       orb.classList.add("active");
     } else if (fw.running) {
-      $("engineState").textContent = "Firewall starting";
+      $("engineState").textContent = "Status: 🟡 Starting…";
+      $("engineState").className = "status-label starting";
       $("engineDetail").textContent = "The worker is running and completing WinDivert / DNS initialization.";
       $("sidebarStatus").textContent = "Starting";
       $("sidebarReady").textContent = "Waiting for WinDivert";
@@ -177,7 +191,8 @@
       badge.classList.add("starting");
       dot.classList.add("starting");
     } else {
-      $("engineState").textContent = "Firewall stopped";
+      $("engineState").textContent = "Status: 🔴 Stopped";
+      $("engineState").className = "status-label";
       $("engineDetail").textContent = fw.administrator
         ? "Start the firewall to begin WinDivert packet filtering."
         : "Restart this web console as Administrator before starting the firewall.";
@@ -276,30 +291,30 @@
     const data = await api("/api/domains");
     const list = $("domainList");
     list.replaceChildren();
+    selectedDomains.clear();
     if (!data.domains.length) {
       const row = document.createElement("div");
-      row.className = "item-row";
-      row.textContent = "No blocked domains.";
+      row.className = "check-row";
+      row.textContent = "⚠️ No blocked domains yet.";
       list.appendChild(row);
       return;
     }
     data.domains.forEach((domain) => {
-      const row = document.createElement("div");
-      row.className = "item-row";
-      const code = document.createElement("code");
-      code.textContent = domain;
-      row.appendChild(code);
-      if (isAdmin) {
-        row.appendChild(actionButton("Unblock", "danger-button compact", async () => {
-          await api("/api/domains", { method: "DELETE", body: { domain } });
-          toast("Domain unblocked", domain);
-          await loadDomains();
-          await loadOverview();
-        }));
-      }
+      const row = document.createElement("label");
+      row.className = "check-row";
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.addEventListener("change", () => {
+        if (checkbox.checked) selectedDomains.add(domain);
+        else selectedDomains.delete(domain);
+      });
+      const text = document.createElement("span");
+      text.textContent = domain;
+      row.append(checkbox, text);
       list.appendChild(row);
     });
   }
+
 
   async function loadIps() {
     const data = await api("/api/blocked-ips");
@@ -339,16 +354,20 @@
 
   async function loadDevices() {
     const tbody = $("deviceTableBody");
-    emptyRow(tbody, isAdmin ? 4 : 3, "Scanning ARP table…");
+    emptyRow(tbody, isAdmin ? 5 : 4, "Scanning ARP table…");
     const data = await api("/api/devices");
     tbody.replaceChildren();
     if (!data.devices.length) {
-      emptyRow(tbody, isAdmin ? 4 : 3, "No devices are currently visible in the ARP table.");
+      emptyRow(tbody, isAdmin ? 5 : 4, "No devices are currently visible in the ARP table.");
       return;
     }
     data.devices.forEach((device) => {
       const tr = document.createElement("tr");
-      tr.append(textCell(device.ip), textCell(device.mac || "Unknown"));
+      tr.append(
+        textCell(device.ip),
+        textCell(device.mac || "Unknown"),
+        textCell((device.vendor || "Unknown") + " / " + (device.device_type || device.type || "Unknown Device"))
+      );
       const status = textCell(device.blocked ? "Blocked" : "Allowed", "badge " + (device.blocked ? "danger" : "ok"));
       tr.appendChild(status);
       if (isAdmin) {
@@ -404,6 +423,32 @@
 
   $("refreshNetworkBtn")?.addEventListener("click", () => loadNetwork().catch(showError));
   $("scanDevicesBtn")?.addEventListener("click", () => loadDevices().catch(showError));
+
+  $("desktopSelectAllDomainsBtn")?.addEventListener("click", () => {
+    selectedDomains.clear();
+    qsa("#domainList input[type=checkbox]").forEach((box) => {
+      box.checked = true;
+      const label = box.closest(".check-row")?.querySelector("span")?.textContent;
+      if (label) selectedDomains.add(label);
+    });
+  });
+
+  $("desktopRemoveDomainBtn")?.addEventListener("click", async () => {
+    if (!selectedDomains.size) {
+      toast("Unblock Website", "Check one or more domains to remove.");
+      return;
+    }
+    try {
+      const domains = [...selectedDomains];
+      for (const domain of domains) {
+        await api("/api/domains", { method: "DELETE", body: { domain } });
+      }
+      selectedDomains.clear();
+      toast("Unblock Website", "Removed " + domains.length + " domain(s).");
+      await loadDomains();
+      await loadOverview();
+    } catch (error) { showError(error); }
+  });
 
   $("domainForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -566,7 +611,7 @@
   });
 
   function applyTheme(darkMode) {
-    document.body.classList.toggle("light", !darkMode);
+    document.body.classList.toggle("dark-mode", !!darkMode);
     requestAnimationFrame(drawTraffic);
   }
 
