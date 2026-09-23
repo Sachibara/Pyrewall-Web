@@ -117,7 +117,7 @@ The browser workspace is intentionally separated from enforcement:
 
 Public app:
 
-`https://portfolio-github-io-five-pi.vercel.app/projects/pyrewall-web/`
+`https://jimcamus.vercel.app/projects/pyrewall-web/`
 
 ## Run
 
