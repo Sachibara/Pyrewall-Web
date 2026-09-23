@@ -2,54 +2,29 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#08111f">
-  <title>PyreWall — Sign in</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta name="theme-color" content="#1e60b0">
+  <title>Admin Login Page</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body class="login-page">
-  <main class="login-shell">
-    <section class="login-brand">
-      <div class="shield-logo">P</div>
-      <p class="eyebrow">Next Generation Firewall</p>
-      <h1>PyreWall</h1>
-      <p class="login-copy">
-        Browser-based control for the same local Windows firewall engine,
-        device controls, domain filtering, rules, threats, and history.
-      </p>
-      <div class="login-points">
-        <span>WinDivert packet filtering</span>
-        <span>DNS & domain control</span>
-        <span>Windows Firewall integration</span>
-      </div>
+  <main class="login-window">
+    <section class="login-logo-panel">
+      <img src="https://raw.githubusercontent.com/Sachibara/Pyrewall/main/ui/FFLogo.png" alt="PyreWall logo">
     </section>
-
-    <section class="login-card">
-      <p class="eyebrow">Administrator console</p>
-      <h2>Sign in</h2>
-      <p class="muted">Use an account stored in PyreWall's existing users database.</p>
-
+    <section class="login-form-panel">
       {% if error %}
-      <div class="alert error">{{ error }}</div>
+      <div class="first-run-banner login-error">{{ error }}</div>
       {% endif %}
-
-      <form method="post" class="login-form">
+      <form method="post" class="desktop-login-form">
         <input type="hidden" name="_csrf" value="{{ csrf }}">
-        <label>
-          <span>Username</span>
-          <input type="text" name="username" autocomplete="username" required autofocus>
-        </label>
-        <label>
-          <span>Password</span>
-          <input type="password" name="password" autocomplete="current-password" required>
-        </label>
-        <button class="primary-button" type="submit">Sign in to PyreWall</button>
+        <input type="text" name="username" autocomplete="username" required autofocus placeholder="Username">
+        <input type="password" name="password" autocomplete="current-password" required placeholder="Password">
+        <label class="remember"><input type="checkbox" name="remember"> Remember me</label>
+        <span class="forgot-details">forgot details?</span>
+        <button class="signin-btn" type="submit">Sign in</button>
       </form>
-
-      <div class="security-note">
-        <strong>Local-first security</strong>
-        <span>The web console binds to 127.0.0.1 by default. Run it as Administrator for real firewall enforcement.</span>
-      </div>
+      <small class="local-login-note">Uses the original PyreWall users database and hashed authentication.</small>
     </section>
   </main>
 </body>
