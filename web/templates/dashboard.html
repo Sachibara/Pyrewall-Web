@@ -190,7 +190,9 @@
         <h2 class="simple-title">📜 Logs & Activity History</h2>
         <div class="form-row history-row">
           <input id="historySearch" placeholder="Search username / action / description or date">
+          <select id="historySort"><option value="desc">Descending</option><option value="asc">Ascending</option></select>
           <button class="qt-btn primary" id="historySearchBtn" type="button">Search</button>
+          <button class="qt-btn warning admin-only" id="archiveLogsBtn" type="button">🗄️ Archive Old Logs</button>
         </div>
         <div class="table-shell">
           <table>
@@ -211,7 +213,12 @@
         </div>
         <div class="form-row">
           <button class="qt-btn primary admin-only" id="saveSettingsBtn" type="button">💾 Save Settings</button>
+          <button class="qt-btn ghost admin-only" id="resetSettingsBtn" type="button">♻️ Reset to Defaults</button>
+        </div>
+        <div class="form-row">
+          <button class="qt-btn ghost admin-only" id="reloadListsBtn" type="button">🔁 Reload Firewall Lists</button>
           <button class="qt-btn ghost admin-only" id="backupBtn" type="button">📦 Backup DBs</button>
+          <button class="qt-btn ghost admin-only" id="openDbFolderBtn" type="button">📂 Open DB Folder</button>
         </div>
         <p class="settings-note" id="backupResult">Tip: Backups are stored under the PyreWall database backup directory in timestamped folders.</p>
       </section>
