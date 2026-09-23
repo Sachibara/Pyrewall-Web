@@ -586,7 +586,8 @@
 
   async function loadHistory() {
     const search = $("historySearch").value.trim();
-    const data = await api("/api/history?limit=250&search=" + encodeURIComponent(search));
+    const order = $("historySort")?.value || "desc";
+    const data = await api("/api/history?limit=250&order=" + encodeURIComponent(order) + "&search=" + encodeURIComponent(search));
     const tbody = $("historyTableBody");
     tbody.replaceChildren();
     if (!data.history.length) {
@@ -608,6 +609,16 @@
   $("historySearchBtn")?.addEventListener("click", () => loadHistory().catch(showError));
   $("historySearch")?.addEventListener("keydown", (event) => {
     if (event.key === "Enter") loadHistory().catch(showError);
+  });
+  $("historySort")?.addEventListener("change", () => loadHistory().catch(showError));
+  $("archiveLogsBtn")?.addEventListener("click", async () => {
+    if (!confirm("Archive logs older than 1 minute? They will be preserved in the archive.")) return;
+    try {
+      const data = await api("/api/history/archive", { method: "POST" });
+      toast("Archive", data.archived ? ("Archived " + data.archived + " log(s).") : "No logs older than 1 minute found to archive.");
+      await loadHistory();
+      await loadOverview();
+    } catch (error) { showError(error); }
   });
 
   function applyTheme(darkMode) {
@@ -640,6 +651,29 @@
       });
       applyTheme(!!data.settings.dark_mode);
       toast("Settings saved", data.autostart?.message || "Preferences updated.");
+    } catch (error) { showError(error); }
+  });
+
+  $("resetSettingsBtn")?.addEventListener("click", async () => {
+    if (!confirm("Reset PyreWall settings to defaults?")) return;
+    try {
+      const data = await api("/api/settings/reset", { method: "POST" });
+      toast("Settings", "Settings reset to defaults.");
+      await loadSettings();
+    } catch (error) { showError(error); }
+  });
+
+  $("reloadListsBtn")?.addEventListener("click", async () => {
+    try {
+      await api("/api/firewall/reload", { method: "POST" });
+      toast("Firewall Lists", "Firewall lists reloaded.");
+    } catch (error) { showError(error); }
+  });
+
+  $("openDbFolderBtn")?.addEventListener("click", async () => {
+    try {
+      const data = await api("/api/open-db-folder", { method: "POST" });
+      toast("DB Folder", data.folder || "Opened.");
     } catch (error) { showError(error); }
   });
 
