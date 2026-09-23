@@ -3,138 +3,428 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#07111f">
-  <meta name="description" content="PyreWall browser workspace for firewall policy planning, rules, signatures, and audit history.">
-  <title>PyreWall Browser Workspace</title>
-  <link rel="stylesheet" href="./styles.css">
-  <script src="./app.js" defer></script>
+  <meta name="theme-color" content="#090a0f">
+  <meta name="description" content="PyreWall Security Center — browser-based firewall policy, device, traffic, threat, and audit workspace for the PyreWall Windows firewall engine.">
+  <title>PyreWall Security Center</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
 </head>
 <body>
-<div class="shell">
+<div class="app-shell">
   <aside class="sidebar">
-    <div class="brand"><div class="shield">P</div><div><strong>PyreWall</strong><span>Browser Workspace</span></div></div>
-    <div class="mode"><i></i><div><strong>Policy workspace</strong><span>Saved locally in this browser</span></div></div>
-    <nav>
-      <button class="nav active" data-page="overview">Overview</button>
-      <button class="nav" data-page="network">Network Control</button>
-      <button class="nav" data-page="rules">Firewall Rules</button>
-      <button class="nav" data-page="signatures">App Signatures</button>
-      <button class="nav" data-page="history">History</button>
-      <button class="nav" data-page="settings">Settings</button>
+    <div class="brand">
+      <div class="brand-shield">
+        <span class="brand-core">P</span>
+      </div>
+      <div>
+        <strong>PYREWALL</strong>
+        <small>SECURITY CENTER</small>
+      </div>
+    </div>
+
+    <div class="engine-state">
+      <span class="engine-led"></span>
+      <div>
+        <b>PORTFOLIO MODE</b>
+        <small>Policy simulation active</small>
+      </div>
+    </div>
+
+    <div class="nav-label">SECURITY MODULES</div>
+    <nav class="nav">
+      <button class="nav-item active" data-page="overview"><i>01</i><span>Command Center</span></button>
+      <button class="nav-item" data-page="websites"><i>02</i><span>Web Control</span></button>
+      <button class="nav-item" data-page="devices"><i>03</i><span>Devices</span></button>
+      <button class="nav-item" data-page="applications"><i>04</i><span>Apps & Services</span></button>
+      <button class="nav-item" data-page="rules"><i>05</i><span>Firewall Rules</span></button>
+      <button class="nav-item" data-page="traffic"><i>06</i><span>Traffic</span></button>
+      <button class="nav-item" data-page="threats"><i>07</i><span>Threats</span></button>
+      <button class="nav-item" data-page="history"><i>08</i><span>Audit History</span></button>
+      <button class="nav-item" data-page="settings"><i>09</i><span>Settings</span></button>
     </nav>
-    <div class="local-note"><strong>Real enforcement</strong><p>Windows Firewall + WinDivert actions require the local PyreWall backend running as Administrator.</p></div>
+
+    <div class="local-agent-note">
+      <strong>Windows Agent Boundary</strong>
+      <p>Real WinDivert, Windows Firewall, ARP discovery, packet enforcement, and live counters run only on the local Windows host as Administrator.</p>
+      <span class="agent-chip">LOCALHOST :8765</span>
+    </div>
   </aside>
 
   <main class="workspace">
     <header class="topbar">
-      <div><p class="eyebrow" id="pageEyebrow">Firewall policy</p><h1 id="pageTitle">Overview</h1></div>
+      <div class="page-heading">
+        <span id="pageCode">SEC / 01</span>
+        <div>
+          <p id="pageEyebrow">Unified firewall operations</p>
+          <h1 id="pageTitle">Command Center</h1>
+        </div>
+      </div>
       <div class="top-actions">
-        <button class="btn secondary" id="exportBtn">Export workspace</button>
-        <label class="btn secondary import-label">Import<input id="importInput" type="file" accept="application/json"></label>
-        <button class="btn primary" data-go="network">Add policy</button>
+        <div class="global-search-wrap">
+          <input id="globalSearch" type="search" placeholder="Search domain, IP, device, app, rule, threat...">
+          <div id="searchResults" class="search-results" hidden></div>
+        </div>
+        <button class="btn ghost" id="exportBtn">Export</button>
+        <label class="btn ghost file-label">Import<input id="importInput" type="file" accept="application/json"></label>
       </div>
     </header>
 
+    <section class="security-strip">
+      <div><span class="status-light green"></span><b>WORKSPACE</b><small>READY</small></div>
+      <div><span>ENGINE</span><b id="stripEngine">SIMULATED</b><small>local agent required</small></div>
+      <div><span>POLICY</span><b id="stripPolicies">0</b><small>active objects</small></div>
+      <div><span>THREATS</span><b id="stripThreats">0</b><small>open events</small></div>
+      <div><span>DEVICES</span><b id="stripDevices">0</b><small>observed</small></div>
+      <div><span>TRAFFIC</span><b id="stripTraffic">0 Mbps</b><small>simulated now</small></div>
+    </section>
+
+    <!-- COMMAND CENTER -->
     <section class="page active" data-panel="overview">
-      <div class="hero">
-        <div>
-          <p class="eyebrow">Local-first policy console</p>
-          <h2>Build firewall policy in the browser. Enforce it locally when ready.</h2>
-          <p>This public workspace is directly usable for organizing blocked domains, IPs, rules, signatures, and firewall settings. Your changes persist in this browser. Real packet filtering still requires the Windows PyreWall service.</p>
-          <div class="hero-actions"><button class="btn primary" data-go="network">Open controls</button><button class="btn secondary" data-go="settings">Local engine setup</button></div>
+      <div class="hero-grid">
+        <article class="hero-panel">
+          <div class="hero-kicker">LOCAL-FIRST FIREWALL CONTROL PLANE</div>
+          <h2>Control policy. Observe traffic. Contain risk.</h2>
+          <p>PyreWall Security Center mirrors the real Windows firewall engine in a browser-first workspace: websites, IPs, devices, application signatures, structured rules, traffic telemetry, threats, and audit all share one policy model.</p>
+          <div class="hero-actions">
+            <button class="btn primary" data-go="websites">Build Web Policy</button>
+            <button class="btn ghost" data-go="threats">Review Threats</button>
+          </div>
+          <div class="capability-row">
+            <span>DNS</span><span>TLS SNI</span><span>HTTP HOST</span><span>WINDIVERT</span><span>NETSH</span><span>ARP</span>
+          </div>
+        </article>
+
+        <article class="shield-panel">
+          <div class="shield-head"><span>SECURITY POSTURE</span><b id="postureLabel">CALCULATING</b></div>
+          <div class="shield-visual">
+            <svg viewBox="0 0 260 300" aria-label="Firewall security posture">
+              <defs>
+                <linearGradient id="shieldFill" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#ff5c73"/>
+                  <stop offset="100%" stop-color="#21d9c5"/>
+                </linearGradient>
+              </defs>
+              <path class="shield-outline" d="M130 14 L227 47 L218 160 C209 222 172 261 130 284 C88 261 51 222 42 160 L33 47 Z"></path>
+              <path id="shieldMeter" class="shield-meter" d="M130 35 L207 61 L199 156 C192 204 164 237 130 258 C96 237 68 204 61 156 L53 61 Z"></path>
+              <path class="shield-core" d="M130 73 L177 89 L172 147 C168 177 151 199 130 214 C109 199 92 177 88 147 L83 89 Z"></path>
+            </svg>
+            <div class="shield-score">
+              <strong id="postureScore">0</strong>
+              <span>posture score</span>
+            </div>
+            <span class="shield-orbit o1">DNS</span>
+            <span class="shield-orbit o2">SNI</span>
+            <span class="shield-orbit o3">APP</span>
+            <span class="shield-orbit o4">IP</span>
+          </div>
+          <div class="shield-row"><span>QUIC visibility policy</span><b id="heroQuic">—</b></div>
+          <div class="shield-row"><span>DoH bypass policy</span><b id="heroDoh">—</b></div>
+          <div class="shield-row"><span>Critical IP safeguards</span><b>ENABLED</b></div>
+        </article>
+      </div>
+
+      <div class="metric-grid">
+        <article><span>Blocked Domains</span><strong id="statDomains">0</strong><small>DNS / SNI / Host</small></article>
+        <article><span>Blocked IPs</span><strong id="statIps">0</strong><small>manual + derived</small></article>
+        <article><span>Firewall Rules</span><strong id="statRules">0</strong><small>structured policy</small></article>
+        <article><span>App Signatures</span><strong id="statSigs">0</strong><small>service patterns</small></article>
+        <article><span>Active Threats</span><strong id="statThreats">0</strong><small>requires attention</small></article>
+      </div>
+
+      <div class="visual-grid">
+        <article class="panel wide">
+          <div class="panel-head">
+            <div><span class="kicker">LIVE-STYLE TELEMETRY</span><h3>Traffic throughput</h3></div>
+            <div class="legend"><span><i class="download"></i>download</span><span><i class="upload"></i>upload</span></div>
+          </div>
+          <svg id="trafficChart" class="traffic-chart" viewBox="0 0 780 260" role="img" aria-label="Upload and download traffic chart">
+            <g class="chart-grid">
+              <line x1="44" y1="24" x2="755" y2="24"></line>
+              <line x1="44" y1="76" x2="755" y2="76"></line>
+              <line x1="44" y1="128" x2="755" y2="128"></line>
+              <line x1="44" y1="180" x2="755" y2="180"></line>
+              <line x1="44" y1="232" x2="755" y2="232"></line>
+            </g>
+            <polyline id="downloadLine" class="line download-line" points=""></polyline>
+            <polyline id="uploadLine" class="line upload-line" points=""></polyline>
+            <g id="trafficLabels" class="chart-labels"></g>
+          </svg>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head"><div><span class="kicker">POLICY MIX</span><h3>Enforcement surface</h3></div></div>
+          <div id="policyDonut" class="donut-block"></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head"><div><span class="kicker">DEVICE RISK</span><h3>Observed network</h3></div><button class="text-btn" data-go="devices">Open Devices</button></div>
+          <div id="deviceRiskList" class="risk-list"></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head"><div><span class="kicker">THREAT FEED</span><h3>Latest detections</h3></div><button class="text-btn" data-go="threats">Review All</button></div>
+          <div id="overviewThreats" class="threat-mini-list"></div>
+        </article>
+      </div>
+
+      <div class="quick-grid">
+        <button class="quick-card red" data-go="websites"><i>WEB</i><div><b>Web Control</b><small>Domains, wildcard policy & resolved IPs</small></div><span>↗</span></button>
+        <button class="quick-card cyan" data-go="devices"><i>DEV</i><div><b>Device Control</b><small>Observed hosts and block/unblock policy</small></div><span>↗</span></button>
+        <button class="quick-card violet" data-go="applications"><i>APP</i><div><b>Apps & Services</b><small>Administrator-defined service signatures</small></div><span>↗</span></button>
+        <button class="quick-card amber" data-go="rules"><i>ACL</i><div><b>Firewall Rules</b><small>IP, port, protocol, direction & action</small></div><span>↗</span></button>
+      </div>
+
+      <div class="grid two">
+        <article class="panel">
+          <div class="panel-head"><div><span class="kicker">RECENT POLICY</span><h3>Latest firewall changes</h3></div><button class="text-btn" data-go="history">Audit</button></div>
+          <div id="recentHistory" class="timeline"></div>
+        </article>
+        <article class="panel">
+          <div class="panel-head"><div><span class="kicker">LOCAL ENGINE</span><h3>Windows enforcement bridge</h3></div></div>
+          <div class="engine-bridge">
+            <div><span class="bridge-led off"></span><b>Public browser workspace</b><small>Policy planning and safe simulation</small></div>
+            <div><span class="bridge-led"></span><b>Flask control plane</b><small>Localhost :8765 on Windows</small></div>
+            <div><span class="bridge-led"></span><b>WinDivert / Windows Firewall</b><small>Administrator privileges required</small></div>
+            <div><span class="bridge-led"></span><b>ARP / packet telemetry</b><small>Available only on local machine/gateway</small></div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- WEB CONTROL -->
+    <section class="page" data-panel="websites">
+      <div class="section-head">
+        <div><span class="kicker">WEB FILTERING</span><h2>Web Control</h2><p>Plan domain policy across DNS, TLS SNI, HTTP Host, and temporary resolved IPs. Wildcards are supported for subdomain coverage.</p></div>
+        <button class="btn ghost" id="simulateResolveBtn">Simulate Resolve</button>
+      </div>
+
+      <div class="grid two">
+        <article class="panel">
+          <div class="panel-head"><div><span class="kicker">DOMAIN POLICY</span><h3>Blocked domains</h3></div></div>
+          <form id="domainForm" class="inline-form">
+            <input id="domainInput" placeholder="example.com or *.example.com" required>
+            <button class="btn primary" type="submit">Add Domain</button>
+          </form>
+          <div id="domainList" class="policy-list"></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head"><div><span class="kicker">ADDRESS POLICY</span><h3>Blocked IPs</h3></div></div>
+          <form id="ipForm" class="inline-form">
+            <input id="ipInput" placeholder="203.0.113.25" required>
+            <button class="btn primary" type="submit">Add IP</button>
+          </form>
+          <div id="ipList" class="policy-list"></div>
+        </article>
+      </div>
+
+      <article class="panel">
+        <div class="panel-head"><div><span class="kicker">RESOLUTION CACHE</span><h3>Temporary domain-derived IPs</h3></div><span class="panel-note">TTL-based simulation</span></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Domain</th><th>Resolved IP</th><th>Reason</th><th>Expires</th></tr></thead>
+            <tbody id="resolvedIpRows"></tbody>
+          </table>
         </div>
-        <div class="engine-card"><span>ENFORCEMENT STATUS</span><strong>Workspace only</strong><small>Connect the local Windows backend for WinDivert enforcement.</small><div class="engine-line"><i></i><span>Browser policy</span><b>Ready</b></div><div class="engine-line muted"><i></i><span>WinDivert</span><b>Local only</b></div></div>
-      </div>
-
-      <div class="stats">
-        <article><span>Blocked domains</span><strong id="statDomains">0</strong><small>DNS / SNI policy</small></article>
-        <article><span>Blocked IPs</span><strong id="statIps">0</strong><small>Manual address policy</small></article>
-        <article><span>Firewall rules</span><strong id="statRules">0</strong><small>IP / port / protocol</small></article>
-        <article><span>App signatures</span><strong id="statSigs">0</strong><small>Service patterns</small></article>
-        <article><span>Audit events</span><strong id="statHistory">0</strong><small>Workspace activity</small></article>
-      </div>
-
-      <div class="grid-2">
-        <article class="panel"><div class="panel-head"><div><p class="eyebrow">Policy summary</p><h3>Recent rules</h3></div><button class="link-btn" data-go="rules">Manage</button></div><div id="recentRules" class="list"></div></article>
-        <article class="panel"><div class="panel-head"><div><p class="eyebrow">Activity</p><h3>Recent changes</h3></div><button class="link-btn" data-go="history">View all</button></div><div id="recentHistory" class="list"></div></article>
-      </div>
+      </article>
     </section>
 
-    <section class="page" data-panel="network">
-      <div class="section-head"><div><p class="eyebrow">Network control</p><h2>Domains & IP addresses</h2><p>Maintain browser-persistent block lists before applying them through the local Windows engine.</p></div></div>
-      <div class="grid-2">
-        <article class="panel">
-          <div class="panel-head"><div><h3>Blocked domains</h3><p>Domain policy for DNS/SNI/HTTP-host enforcement.</p></div></div>
-          <form id="domainForm" class="inline-form"><input id="domainInput" placeholder="example.com" required><button class="btn primary" type="submit">Add domain</button></form>
-          <div id="domainList" class="list"></div>
-        </article>
-        <article class="panel">
-          <div class="panel-head"><div><h3>Blocked IPs</h3><p>Manual destination/source address blocks.</p></div></div>
-          <form id="ipForm" class="inline-form"><input id="ipInput" placeholder="192.168.1.50" required><button class="btn primary" type="submit">Add IP</button></form>
-          <div id="ipList" class="list"></div>
-        </article>
+    <!-- DEVICES -->
+    <section class="page" data-panel="devices">
+      <div class="section-head">
+        <div><span class="kicker">NETWORK ACCESS CONTROL</span><h2>Devices</h2><p>Model devices discovered through the Windows ARP table and apply block/unblock policy in the portfolio workspace.</p></div>
+        <button class="btn primary" id="scanDevicesBtn">Simulate ARP Scan</button>
       </div>
+
+      <div class="device-summary" id="deviceSummary"></div>
+
+      <div class="toolbar">
+        <input id="deviceSearch" type="search" placeholder="Search IP, MAC, name, vendor...">
+        <select id="deviceStateFilter"><option value="">All states</option><option value="allowed">Allowed</option><option value="blocked">Blocked</option><option value="unknown">Unknown</option></select>
+      </div>
+
+      <article class="panel table-panel">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Device</th><th>IP</th><th>MAC</th><th>Vendor</th><th>State</th><th>Last Seen</th><th></th></tr></thead>
+            <tbody id="deviceRows"></tbody>
+          </table>
+        </div>
+      </article>
     </section>
 
+    <!-- APPS -->
+    <section class="page" data-panel="applications">
+      <div class="section-head">
+        <div><span class="kicker">APPLICATION CONTROL</span><h2>Apps & Services</h2><p>Administrator-defined host/domain/IP/service signatures. Nothing is hardcoded to a specific application.</p></div>
+      </div>
+
+      <article class="panel">
+        <form id="sigForm" class="signature-form">
+          <label><span>Service name</span><input id="sigName" placeholder="Example Chat" required></label>
+          <label><span>Host pattern</span><input id="sigHost" placeholder="*.chat.example"></label>
+          <label><span>Domain pattern</span><input id="sigDomain" placeholder="chat.example"></label>
+          <label><span>IP range</span><input id="sigRange" placeholder="198.51.100.0/24"></label>
+          <label><span>Port</span><input id="sigPort" placeholder="ANY"></label>
+          <label><span>Protocol</span><select id="sigProtocol"><option>ANY</option><option>TCP</option><option>UDP</option></select></label>
+          <label><span>Policy</span><select id="sigAction"><option>BLOCK</option><option>MONITOR</option><option>ALLOW</option></select></label>
+          <button class="btn primary" type="submit">Add Signature</button>
+        </form>
+      </article>
+
+      <div id="signatureCards" class="signature-grid"></div>
+    </section>
+
+    <!-- RULES -->
     <section class="page" data-panel="rules">
-      <div class="section-head"><div><p class="eyebrow">Policy management</p><h2>Firewall Rules</h2><p>Create structured IP, port, protocol, and action rules that persist in this browser workspace.</p></div></div>
+      <div class="section-head">
+        <div><span class="kicker">STRUCTURED FIREWALL POLICY</span><h2>Firewall Rules</h2><p>Create ordered allow/block rules by direction, IP, port, and protocol. The Windows backend maps applicable rules to WinDivert and netsh enforcement.</p></div>
+      </div>
+
       <article class="panel">
         <form id="ruleForm" class="rule-form">
-          <label><span>Target IP</span><input id="ruleIp" placeholder="10.0.0.10" required></label>
-          <label><span>Port</span><input id="rulePort" placeholder="ANY" value="ANY"></label>
+          <label><span>Direction</span><select id="ruleDirection"><option>OUT</option><option>IN</option><option>BOTH</option></select></label>
+          <label><span>Target IP</span><input id="ruleIp" placeholder="10.0.0.10 or ANY" required></label>
+          <label><span>Port</span><input id="rulePort" value="ANY"></label>
           <label><span>Protocol</span><select id="ruleProtocol"><option>TCP</option><option>UDP</option><option>ICMP</option><option>ANY</option></select></label>
           <label><span>Action</span><select id="ruleAction"><option>BLOCK</option><option>ALLOW</option></select></label>
-          <button class="btn primary" type="submit">Add rule</button>
+          <button class="btn primary" type="submit">Add Rule</button>
         </form>
-        <div class="table-wrap"><table><thead><tr><th>ID</th><th>IP</th><th>Port</th><th>Protocol</th><th>Action</th><th></th></tr></thead><tbody id="ruleTable"></tbody></table></div>
+      </article>
+
+      <article class="panel table-panel">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Priority</th><th>Direction</th><th>Target</th><th>Port</th><th>Protocol</th><th>Action</th><th>Enabled</th><th></th></tr></thead>
+            <tbody id="ruleTable"></tbody>
+          </table>
+        </div>
       </article>
     </section>
 
-    <section class="page" data-panel="signatures">
-      <div class="section-head"><div><p class="eyebrow">Application policy</p><h2>Service Signatures</h2><p>Store administrator-defined host/domain patterns without hardcoded application rules.</p></div></div>
+    <!-- TRAFFIC -->
+    <section class="page" data-panel="traffic">
+      <div class="section-head">
+        <div><span class="kicker">NETWORK TELEMETRY</span><h2>Traffic Monitor</h2><p>Public mode generates safe telemetry samples. The local Windows backend uses real interface byte counters and packet metadata.</p></div>
+        <button class="btn primary" id="refreshTrafficBtn">Collect Sample</button>
+      </div>
+
+      <div class="traffic-kpis">
+        <article><span>Download</span><strong id="trafficDownload">0 Mbps</strong><small>current sample</small></article>
+        <article><span>Upload</span><strong id="trafficUpload">0 Mbps</strong><small>current sample</small></article>
+        <article><span>Total Sessions</span><strong id="trafficSessions">0</strong><small>simulated connections</small></article>
+        <article><span>Blocked Events</span><strong id="trafficBlocked">0</strong><small>policy decisions</small></article>
+      </div>
+
       <article class="panel">
-        <form id="sigForm" class="sig-form">
-          <input id="sigName" placeholder="Service name" required>
-          <input id="sigHost" placeholder="Host pattern, e.g. *.discord.com">
-          <input id="sigDomain" placeholder="Domain pattern">
-          <input id="sigRange" placeholder="IP range">
-          <select id="sigProtocol"><option>ANY</option><option>TCP</option><option>UDP</option></select>
-          <button class="btn primary" type="submit">Add signature</button>
-        </form>
-        <div class="table-wrap"><table><thead><tr><th>Name</th><th>Host pattern</th><th>Domain</th><th>IP range</th><th>Protocol</th><th></th></tr></thead><tbody id="sigTable"></tbody></table></div>
+        <div class="panel-head"><div><span class="kicker">THROUGHPUT</span><h3>Recent bandwidth samples</h3></div></div>
+        <svg id="trafficChartFull" class="traffic-chart large" viewBox="0 0 980 320" role="img" aria-label="Traffic throughput chart">
+          <g class="chart-grid">
+            <line x1="52" y1="28" x2="950" y2="28"></line>
+            <line x1="52" y1="94" x2="950" y2="94"></line>
+            <line x1="52" y1="160" x2="950" y2="160"></line>
+            <line x1="52" y1="226" x2="950" y2="226"></line>
+            <line x1="52" y1="292" x2="950" y2="292"></line>
+          </g>
+          <polyline id="downloadLineFull" class="line download-line" points=""></polyline>
+          <polyline id="uploadLineFull" class="line upload-line" points=""></polyline>
+          <g id="trafficLabelsFull" class="chart-labels"></g>
+        </svg>
+      </article>
+
+      <article class="panel table-panel">
+        <div class="panel-head padded"><div><span class="kicker">CONNECTION TABLE</span><h3>Recent sessions</h3></div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Process / Service</th><th>Local</th><th>Remote</th><th>Protocol</th><th>State</th><th>Policy</th></tr></thead>
+            <tbody id="connectionRows"></tbody>
+          </table>
+        </div>
       </article>
     </section>
 
-    <section class="page" data-panel="history">
-      <div class="section-head"><div><p class="eyebrow">Audit trail</p><h2>Workspace History</h2><p>Every local policy edit is recorded in browser storage.</p></div><button class="btn secondary" id="clearHistoryBtn">Clear history</button></div>
-      <article class="panel"><div id="historyList" class="list history-list"></div></article>
+    <!-- THREATS -->
+    <section class="page" data-panel="threats">
+      <div class="section-head">
+        <div><span class="kicker">DETECTION & RESPONSE</span><h2>Threat Events</h2><p>Review suspicious connection behavior, bypass attempts, repeated blocked access, and policy violations generated in the portfolio simulation.</p></div>
+        <button class="btn ghost" id="generateThreatBtn">Generate Sample Event</button>
+      </div>
+
+      <div class="threat-summary" id="threatSummary"></div>
+      <div id="threatCards" class="threat-grid"></div>
     </section>
 
+    <!-- HISTORY -->
+    <section class="page" data-panel="history">
+      <div class="section-head">
+        <div><span class="kicker">AUDIT TRAIL</span><h2>History</h2><p>All browser workspace policy edits, device actions, threat handling, traffic samples, and settings changes are recorded here.</p></div>
+        <button class="btn ghost" id="clearHistoryBtn">Clear History</button>
+      </div>
+
+      <div class="toolbar">
+        <input id="historySearch" type="search" placeholder="Search action or detail...">
+        <select id="historyModuleFilter"><option value="">All modules</option></select>
+      </div>
+
+      <article class="panel">
+        <div id="historyList" class="timeline full"></div>
+      </article>
+    </section>
+
+    <!-- SETTINGS -->
     <section class="page" data-panel="settings">
-      <div class="section-head"><div><p class="eyebrow">Configuration</p><h2>Browser & Local Engine</h2><p>Browser settings persist locally. Windows-only enforcement settings become operational when using the local backend.</p></div></div>
-      <div class="grid-2">
+      <div class="section-head">
+        <div><span class="kicker">SECURITY CONFIGURATION</span><h2>Settings & Local Engine</h2><p>Portfolio settings persist in this browser. Windows-only enforcement settings are applied by the local Flask/Python engine when installed.</p></div>
+      </div>
+
+      <div class="grid two">
         <article class="panel">
-          <div class="panel-head"><div><h3>Policy settings</h3><p>Saved in this browser workspace.</p></div></div>
-          <label class="toggle-row"><input id="quicToggle" type="checkbox"><span><strong>Disable QUIC policy</strong><small>Plan UDP/443 blocking for SNI visibility.</small></span></label>
-          <label class="toggle-row"><input id="dohToggle" type="checkbox"><span><strong>Block known DoH endpoints</strong><small>Plan DNS-bypass reduction.</small></span></label>
+          <div class="panel-head"><div><span class="kicker">POLICY ENGINE</span><h3>Firewall behavior</h3></div></div>
+          <label class="toggle-row"><input id="ipBlockingToggle" type="checkbox"><span><b>Enable IP blocking</b><small>Maintain temporary and permanent blocked-IP policy.</small></span></label>
+          <label class="toggle-row"><input id="quicToggle" type="checkbox"><span><b>Disable QUIC globally</b><small>Plan UDP/443 blocking to preserve hostname inspection.</small></span></label>
+          <label class="toggle-row"><input id="dohToggle" type="checkbox"><span><b>Block known DoH endpoints</b><small>Reduce encrypted-DNS bypass routes.</small></span></label>
           <label class="field"><span>Temporary domain-IP TTL (seconds)</span><input id="ttlInput" type="number" min="30" max="86400"></label>
-          <button class="btn primary" id="saveSettingsBtn">Save settings</button>
+          <button class="btn primary" id="saveSettingsBtn">Save Settings</button>
         </article>
-        <article class="panel local-engine">
-          <div class="panel-head"><div><h3>Real Windows enforcement</h3><p>Required for actual packet blocking.</p></div></div>
-          <ol>
-            <li>Clone or download the PyreWall Web repository on Windows.</li>
-            <li>Run <code>install_windows.bat</code> as Administrator.</li>
-            <li>Open <code>http://127.0.0.1:8765</code>.</li>
-            <li>Use the local console for WinDivert, Windows Firewall, ARP discovery, and live traffic.</li>
-          </ol>
-          <a class="btn secondary" href="https://github.com/Sachibara/Pyrewall-Web" target="_blank" rel="noopener noreferrer">Open repository</a>
+
+        <article class="panel">
+          <div class="panel-head"><div><span class="kicker">CRITICAL IP SAFEGUARDS</span><h3>Protected destinations</h3></div></div>
+          <div id="protectedIpList" class="protected-list"></div>
         </article>
       </div>
-      <article class="panel danger-zone"><div><h3>Reset browser workspace</h3><p>Restore the public browser workspace to its initial empty state.</p></div><button class="btn danger" id="resetBtn">Reset workspace</button></article>
+
+      <div class="grid two">
+        <article class="panel local-engine">
+          <div class="panel-head"><div><span class="kicker">WINDOWS DEPLOYMENT</span><h3>Connect the real enforcement engine</h3></div></div>
+          <ol>
+            <li>Clone or download <code>Sachibara/Pyrewall-Web</code> on Windows 10/11.</li>
+            <li>Run <code>install_windows.bat</code> as Administrator.</li>
+            <li>Open <code>http://127.0.0.1:8765</code>.</li>
+            <li>Change the default administrator password immediately.</li>
+            <li>Use the local console for WinDivert, Windows Firewall, ARP discovery, real traffic, backups, and user management.</li>
+          </ol>
+          <a class="btn ghost" href="https://github.com/Sachibara/Pyrewall-Web" target="_blank" rel="noopener noreferrer">Open Repository</a>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head"><div><span class="kicker">ARCHITECTURE</span><h3>Enforcement path</h3></div></div>
+          <div class="architecture-flow">
+            <div><b>BROWSER</b><span>policy + admin UI</span></div><i>→</i>
+            <div><b>FLASK</b><span>local control plane</span></div><i>→</i>
+            <div><b>PYTHON CORE</b><span>policy engine</span></div><i>→</i>
+            <div><b>WINDOWS</b><span>WinDivert / netsh / ARP</span></div>
+          </div>
+        </article>
+      </div>
+
+      <article class="panel danger-zone">
+        <div><h3>Reset portfolio workspace</h3><p>Restore all public browser data to the seeded PyreWall Security Center state.</p></div>
+        <button class="btn danger" id="resetBtn">Reset Workspace</button>
+      </article>
     </section>
   </main>
 </div>
+
 <div id="toastRegion" class="toast-region"></div>
 </body>
 </html>
