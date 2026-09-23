@@ -84,7 +84,7 @@ uninstall_windows.bat
 
 The repository now also includes a public **browser-first policy workspace** under `browser/`.
 
-It can be opened directly from GitHub Pages and used without installing Python. Browser Workspace Mode stores domains, blocked IPs, firewall rules, application signatures, settings, and audit history in local browser storage.
+It can be opened directly from public web hosting and used without installing Python. Browser Workspace Mode stores domains, blocked IPs, firewall rules, application signatures, settings, and audit history in local browser storage.
 
 The browser workspace is intentionally separated from enforcement:
 
@@ -93,7 +93,7 @@ The browser workspace is intentionally separated from enforcement:
 
 Public app:
 
-`https://sachibara.github.io/Pyrewall-Web/`
+`https://portfolio-github-io-five-pi.vercel.app/projects/pyrewall-web/`
 
 ## Run
 
