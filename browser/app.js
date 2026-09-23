@@ -1,520 +1,593 @@
 (() => {
   "use strict";
 
-  const KEY = "pyrewall_browser_workspace_v1";
+  const KEY = "pyrewall_desktop_remake_v1";
+  const SESSION_KEY = "pyrewall_demo_session_v1";
   const $ = (id) => document.getElementById(id);
-  const qsa = (s, r = document) => [...r.querySelectorAll(s)];
-  const pageMeta = {
-    overview: ["Unified security operations", "Security Overview"],
-    devices: ["Network access control", "Devices"],
-    network: ["Website filtering", "Web Control"],
-    rules: ["Policy engine", "Firewall Rules"],
-    signatures: ["Application control", "Applications"],
-    threats: ["Security events", "Threat Center"],
-    traffic: ["Network telemetry", "Traffic Analytics"],
-    history: ["Audit trail", "Audit History"],
-    settings: ["Windows enforcement", "Engine & Settings"]
-  };
+  const qsa = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+  const now = () => new Date().toISOString();
 
-  const seed = () => {
-    const now = Date.now();
-    const ago = (minutes) => new Date(now - minutes * 60000).toISOString();
+  function seedState() {
+    const t = Date.now();
+    const ago = (min) => new Date(t - min * 60000).toISOString();
     return {
+      firewall: { running: false, ready: false },
       domains: ["example-social.test", "*.streaming.example"],
-      ips: ["203.0.113.25", "198.51.100.44"],
-      rules: [
-        { id: 1, ip: "198.51.100.20", port: "443", protocol: "TCP", action: "BLOCK", source: "Manual" },
-        { id: 2, ip: "10.0.0.53", port: "53", protocol: "UDP", action: "ALLOW", source: "Infrastructure" },
-        { id: 3, ip: "0.0.0.0/0", port: "443", protocol: "UDP", action: "BLOCK", source: "QUIC Policy" }
+      devices: [
+        { id:"D1", ip:"192.168.137.1", mac:"3C:52:82:AA:10:01", vendor:"Microsoft", type:"Gateway / Windows PC", hostname:"JIM-LAPTOP", status:"active", lastSeen:ago(1) },
+        { id:"D2", ip:"192.168.137.102", mac:"8A:12:4F:31:B2:19", vendor:"OPPO", type:"Smartphone", hostname:"OPPO-A16", status:"active", lastSeen:ago(2) },
+        { id:"D3", ip:"192.168.137.115", mac:"7C:21:9A:CC:55:03", vendor:"Unknown", type:"Unknown Device", hostname:"UNKNOWN-7C21", status:"active", lastSeen:ago(4) },
+        { id:"D4", ip:"192.168.137.120", mac:"A2:44:17:21:10:90", vendor:"Unknown", type:"Unknown Device", hostname:"BLOCKED-DEVICE", status:"blocked", lastSeen:ago(18) }
       ],
       signatures: [
-        { id: 1, name: "Example Chat", host: "*.chat.example", domain: "chat.example", range: "", protocol: "ANY" },
-        { id: 2, name: "Example Stream", host: "*.video.example", domain: "video.example", range: "203.0.113.0/24", protocol: "TCP" }
+        { id:1, name:"Example Chat", pattern:"*.chat.example", ipRange:"", protocol:"ANY" },
+        { id:2, name:"Example Stream", pattern:"*.video.example", ipRange:"203.0.113.0/24", protocol:"HTTPS" }
       ],
-      devices: [
-        { id: "D1", hostname: "JIM-LAPTOP", ip: "192.168.137.1", mac: "3C:52:82:AA:10:01", owner: "Administrator", status: "Allowed", lastSeen: ago(1) },
-        { id: "D2", hostname: "OPPO-A16", ip: "192.168.137.102", mac: "8A:12:4F:31:B2:19", owner: "Mobile test device", status: "Allowed", lastSeen: ago(2) },
-        { id: "D3", hostname: "UNKNOWN-7C21", ip: "192.168.137.115", mac: "7C:21:9A:CC:55:03", owner: "Unassigned", status: "Unknown", lastSeen: ago(4) },
-        { id: "D4", hostname: "BLOCKED-DEVICE", ip: "192.168.137.120", mac: "A2:44:17:21:10:90", owner: "Policy test", status: "Blocked", lastSeen: ago(18) }
+      rules: [
+        { id:1, ip:"198.51.100.20", port:"443", protocol:"TCP", action:"BLOCK" },
+        { id:2, ip:"10.0.0.53", port:"53", protocol:"UDP", action:"ALLOW" }
       ],
       threats: [
-        { id: "T1", severity: "Critical", status: "Open", src: "192.168.137.115", dst: "198.51.100.44", protocol: "TCP", title: "Blocked destination contact", description: "Unknown device attempted repeated connections to a blocked destination.", at: ago(6) },
-        { id: "T2", severity: "High", status: "Open", src: "192.168.137.102", dst: "203.0.113.25", protocol: "UDP", title: "QUIC bypass attempt", description: "UDP/443 traffic matched the QUIC visibility policy.", at: ago(12) },
-        { id: "T3", severity: "Medium", status: "Acknowledged", src: "192.168.137.120", dst: "1.1.1.1", protocol: "HTTPS", title: "Possible DoH usage", description: "Traffic matched a known encrypted-DNS pattern.", at: ago(32) },
-        { id: "T4", severity: "Low", status: "Resolved", src: "192.168.137.102", dst: "192.168.137.1", protocol: "ARP", title: "Device identity refreshed", description: "ARP mapping changed and was re-identified.", at: ago(75) }
+        { id:1, timestamp:ago(6), src:"192.168.137.115", dst:"198.51.100.44", protocol:"TCP", severity:"HIGH", description:"Blocked destination contact from unknown device." },
+        { id:2, timestamp:ago(12), src:"192.168.137.102", dst:"203.0.113.25", protocol:"UDP", severity:"MEDIUM", description:"QUIC traffic matched visibility policy." },
+        { id:3, timestamp:ago(32), src:"192.168.137.120", dst:"1.1.1.1", protocol:"HTTPS", severity:"LOW", description:"Possible encrypted DNS endpoint observed." }
       ],
       traffic: {
-        upload: [1.2,1.6,1.4,1.8,2.1,1.9,2.4,2.2,2.7,3.0,2.5,2.3,2.8,3.1,2.9,3.4,3.2,3.0,3.5,3.1,2.8,3.3,3.0,3.2],
-        download: [4.2,4.8,4.5,5.1,5.4,5.0,5.8,5.5,6.2,6.8,6.0,5.7,6.4,6.9,6.6,7.1,6.8,6.5,7.3,6.9,6.4,7.0,6.7,6.9],
-        protocols: { HTTPS: 56, DNS: 12, QUIC: 18, Other: 14 },
-        destinations: [
-          { name: "Cloud services", host: "203.0.113.25", mb: 182 },
-          { name: "Software updates", host: "198.51.100.60", mb: 96 },
-          { name: "DNS infrastructure", host: "10.0.0.53", mb: 41 },
-          { name: "Local gateway", host: "192.168.137.1", mb: 22 }
-        ]
+        download:[3.2,4.1,3.8,4.9,5.5,5.2,6.1,5.7,6.6,7.1,6.4,5.9,6.8,7.2,6.9,7.5,7.0,6.7,7.8,7.2,6.8,7.4,7.0,7.3,7.8,7.4,7.9,8.2,7.6,7.9],
+        upload:[1.0,1.4,1.2,1.6,1.8,1.7,2.0,1.9,2.2,2.5,2.1,2.0,2.4,2.6,2.3,2.8,2.6,2.4,2.9,2.7,2.4,2.8,2.6,2.7,3.0,2.8,3.1,3.0,2.9,3.1]
       },
-      engine: { running: false, ready: false, mode: "demo" },
-      settings: { disable_quic: true, block_doh: false, enable_ip_blocking: true, temp_ip_ttl: 900 },
+      settings: {
+        auto_start:false,
+        detailed_logging:false,
+        dark_mode:false,
+        dns_proxy_enabled:true,
+        create_netsh_blocks:true
+      },
+      users: [
+        { username:"admin", password:"admin", role:"admin" },
+        { username:"user", password:"user", role:"user" }
+      ],
       history: [
-        { at: ago(2), action: "Workspace initialized", detail: "PyreWall Unified security workspace created." },
-        { at: ago(6), action: "Threat blocked", detail: "Unknown device attempted access to a blocked destination." },
-        { at: ago(12), action: "QUIC policy matched", detail: "UDP/443 traffic matched application visibility policy." }
-      ]
+        { timestamp:ago(1), username:"admin", action:"Workspace Opened", description:"PyreWall desktop-remake portfolio workspace initialized." },
+        { timestamp:ago(6), username:"system", action:"Threat Logged", description:"Blocked destination contact from unknown device." },
+        { timestamp:ago(12), username:"system", action:"QUIC Match", description:"UDP/443 traffic matched application visibility policy." },
+        { timestamp:ago(30), username:"admin", action:"Block Domain", description:"example-social.test" }
+      ],
+      archivedHistory:[]
     };
-  };
+  }
 
-  let state = load();
-
-  function load() {
+  function loadState() {
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        const defaults = seed();
-        return {
-          ...defaults,
-          ...parsed,
-          devices: Array.isArray(parsed.devices) ? parsed.devices : defaults.devices,
-          threats: Array.isArray(parsed.threats) ? parsed.threats : defaults.threats,
-          traffic: parsed.traffic || defaults.traffic,
-          engine: { ...defaults.engine, ...(parsed.engine || {}) },
-          settings: { ...defaults.settings, ...(parsed.settings || {}) }
-        };
-      }
-    } catch (_) {}
-    return seed();
+      if (!raw) return seedState();
+      const saved = JSON.parse(raw);
+      const defaults = seedState();
+      return {
+        ...defaults,
+        ...saved,
+        firewall:{...defaults.firewall,...(saved.firewall||{})},
+        settings:{...defaults.settings,...(saved.settings||{})},
+        users:Array.isArray(saved.users)&&saved.users.length?saved.users:defaults.users,
+        archivedHistory:Array.isArray(saved.archivedHistory)?saved.archivedHistory:[]
+      };
+    } catch (_) {
+      return seedState();
+    }
   }
+
+  let state = loadState();
+  let currentUser = null;
+  let selectedDomains = new Set();
 
   function save() {
     localStorage.setItem(KEY, JSON.stringify(state));
-    renderAll();
   }
 
-  function log(action, detail) {
-    state.history.unshift({ at: new Date().toISOString(), action, detail });
-    state.history = state.history.slice(0, 200);
+  function log(action, description, username = currentUser?.username || "system") {
+    state.history.unshift({ timestamp: now(), username, action, description });
+    state.history = state.history.slice(0, 500);
+    save();
   }
 
   function esc(v) {
     return String(v ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
   }
 
-  function toast(title, msg = "") {
-    const n = document.createElement("div");
-    n.className = "toast";
-    n.innerHTML = "<strong>" + esc(title) + "</strong><span>" + esc(msg) + "</span>";
-    $("toastRegion").appendChild(n);
-    setTimeout(() => n.remove(), 3500);
+  function toast(title, message = "") {
+    const el = document.createElement("div");
+    el.className = "toast";
+    el.innerHTML = "<strong>" + esc(title) + "</strong><span>" + esc(message) + "</span>";
+    $("toastRegion").appendChild(el);
+    setTimeout(() => el.remove(), 3200);
   }
 
-  function openPage(page) {
-    qsa("[data-panel]").forEach((p) => p.classList.toggle("active", p.dataset.panel === page));
-    qsa("[data-page]").forEach((b) => b.classList.toggle("active", b.dataset.page === page));
-    $("pageEyebrow").textContent = pageMeta[page][0];
-    $("pageTitle").textContent = pageMeta[page][1];
+  function setTab(tab) {
+    if (tab === "users" && currentUser?.role !== "admin") return;
+    qsa("[data-panel]").forEach(p => p.classList.toggle("active", p.dataset.panel === tab));
+    qsa("[data-tab]").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+    if (tab === "overview") renderOverview();
+    if (tab === "network") renderNetwork();
+    if (tab === "threats") renderThreats();
+    if (tab === "rules") renderRules();
+    if (tab === "history") renderHistory();
+    if (tab === "settings") renderSettings();
+    if (tab === "users") renderUsers();
   }
 
-  qsa("[data-page]").forEach((b) => b.addEventListener("click", () => openPage(b.dataset.page)));
-  qsa("[data-go]").forEach((b) => b.addEventListener("click", () => openPage(b.dataset.go)));
+  qsa("[data-tab]").forEach(b => b.addEventListener("click", () => setTab(b.dataset.tab)));
+  qsa("[data-card-target]").forEach(b => b.addEventListener("click", () => setTab(b.dataset.cardTarget)));
+
+  function applyRoleVisibility() {
+    const admin = currentUser?.role === "admin";
+    qsa(".admin-only").forEach(el => el.hidden = !admin);
+  }
+
+  function showApp(user) {
+    currentUser = user;
+    $("loginScreen").hidden = true;
+    $("desktopApp").hidden = false;
+    $("welcomeLabel").textContent = "Welcome, " + user.username + " 👋";
+    applyRoleVisibility();
+    applyTheme();
+    renderAll();
+    setTab("overview");
+  }
+
+  function doLogin() {
+    const username = $("loginUsername").value.trim();
+    const password = $("loginPassword").value;
+    if (!username || !password) {
+      toast("Warning", "Please enter both username and password.");
+      return;
+    }
+    const user = state.users.find(u => u.username === username && u.password === password);
+    if (!user) {
+      log("Login Failed", "User login attempt failed.", username || "(blank)");
+      toast("Login failed", "Invalid username or password.");
+      return;
+    }
+    log("Login Success", "User login (" + user.role + ")", username);
+    if ($("rememberMe").checked) {
+      localStorage.setItem(SESSION_KEY, JSON.stringify({username:user.username}));
+    } else {
+      localStorage.removeItem(SESSION_KEY);
+    }
+    $("firstRunBanner").hidden = true;
+    showApp(user);
+  }
+
+  $("signInBtn").addEventListener("click", doLogin);
+  ["loginUsername","loginPassword"].forEach(id => $(id).addEventListener("keydown", e => {
+    if (e.key === "Enter") doLogin();
+  }));
+  $("forgotBtn").addEventListener("click", () => toast("Demo credentials", "Use admin / admin or user / user in the public portfolio remake."));
+  $("logoutBtn").addEventListener("click", () => {
+    if (!confirm("Are you sure you want to logout? Unsaved changes may be lost.")) return;
+    log("Logged out", "Web remake session ended.");
+    currentUser = null;
+    localStorage.removeItem(SESSION_KEY);
+    $("desktopApp").hidden = true;
+    $("loginScreen").hidden = false;
+    $("loginPassword").value = "";
+  });
+
+  function renderStatus() {
+    const s = $("statusLabel");
+    if (state.firewall.ready) {
+      s.textContent = "Status: 🟢 Running";
+      s.className = "status-label running";
+      $("startFirewallBtn").disabled = true;
+      $("stopFirewallBtn").disabled = false;
+    } else if (state.firewall.running) {
+      s.textContent = "Status: 🟡 Starting…";
+      s.className = "status-label starting";
+      $("startFirewallBtn").disabled = true;
+      $("stopFirewallBtn").disabled = true;
+    } else {
+      s.textContent = "Status: 🔴 Stopped";
+      s.className = "status-label stopped";
+      $("startFirewallBtn").disabled = false;
+      $("stopFirewallBtn").disabled = true;
+    }
+  }
+
+  $("startFirewallBtn").addEventListener("click", () => {
+    if (state.firewall.running || state.firewall.ready) {
+      toast("Firewall", "⚙️ Firewall is already running.");
+      return;
+    }
+    state.firewall.running = true;
+    state.firewall.ready = false;
+    renderStatus();
+    save();
+    setTimeout(() => {
+      state.firewall.running = true;
+      state.firewall.ready = true;
+      log("Started firewall", "Portfolio mode simulated firewall start.");
+      save();
+      renderStatus();
+      renderOverview();
+      toast("Firewall", "✅ Firewall started successfully. Portfolio simulation only.");
+    }, 650);
+  });
+
+  $("stopFirewallBtn").addEventListener("click", () => {
+    if (!state.firewall.running && !state.firewall.ready) {
+      toast("Firewall", "⚠️ Firewall is not currently running.");
+      return;
+    }
+    if (!confirm("Stop the firewall?")) return;
+    state.firewall.running = false;
+    state.firewall.ready = false;
+    log("Stopped firewall", "Portfolio mode simulated firewall stop.");
+    save();
+    renderStatus();
+    renderOverview();
+    toast("Firewall", "🛑 Firewall stopped successfully.");
+  });
 
   function renderOverview() {
-    $("statDomains").textContent = state.domains.length;
-    $("statIps").textContent = state.ips.length;
-    $("statRules").textContent = state.rules.length;
-    $("statSigs").textContent = state.signatures.length;
-    $("statThreats").textContent = state.threats.filter((t) => t.status !== "Resolved").length;
-    $("securityScore").textContent = securityScore();
-
-    renderTrafficChart("uploadLine", "downloadLine");
-    renderThreatBars();
-
-    $("recentThreats").innerHTML = state.threats.filter((t) => t.status !== "Resolved").slice(0, 5).map((t) =>
-      '<div class="list-row"><div><strong>' + esc(t.title) + '</strong><small>' +
-      esc(t.src + " → " + t.dst + " · " + t.description) +
-      '</small></div><span class="' + (t.severity === "Critical" || t.severity === "High" ? "action-block" : "action-allow") + '">' +
-      esc(t.severity) + "</span></div>"
-    ).join("") || '<div class="empty">No active threats.</div>';
-
-    $("recentHistory").innerHTML = state.history.slice(0, 6).map((h) =>
-      '<div class="list-row"><div><strong>' + esc(h.action) + "</strong><small>" + esc(h.detail) +
-      '</small></div><small>' + new Date(h.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + "</small></div>"
-    ).join("") || '<div class="empty">No history yet.</div>';
+    $("overviewSites").textContent = state.domains.length;
+    $("overviewDevices").textContent = state.devices.filter(d => d.status === "active").length;
+    $("overviewSignatures").textContent = state.signatures.length;
+    $("overviewUsers").textContent = state.users.length;
+    $("overviewRules").textContent = state.rules.length;
+    $("overviewThreats").textContent = state.threats.length;
+    $("overviewHistoryRows").innerHTML = state.history.slice(0,12).map(h =>
+      "<tr><td>" + esc(new Date(h.timestamp).toLocaleTimeString()) + "</td><td>" + esc(h.action) + "</td><td>" + esc(h.description) + "</td></tr>"
+    ).join("") || '<tr><td colspan="3">No history entries.</td></tr>';
+    renderStatus();
   }
 
-  function renderNetwork() {
-    $("domainList").innerHTML = state.domains.map((d, i) =>
-      '<div class="list-row"><div><strong>' + esc(d) +
-      '</strong><small>Browser-persistent domain policy</small></div><button class="mini-btn danger" data-domain-remove="' +
-      i + '">Remove</button></div>'
-    ).join("") || '<div class="empty">No blocked domains.</div>';
+  $("overviewRefreshBtn").addEventListener("click", () => {
+    renderOverview();
+    toast("Overview", "Summary refreshed.");
+  });
 
-    $("ipList").innerHTML = state.ips.map((ip, i) =>
-      '<div class="list-row"><div><strong>' + esc(ip) +
-      '</strong><small>Manual browser-persistent IP policy</small></div><button class="mini-btn danger" data-ip-remove="' +
-      i + '">Remove</button></div>'
-    ).join("") || '<div class="empty">No blocked IPs.</div>';
+  function normalizeDomain(raw) {
+    let v = String(raw || "").trim().toLowerCase();
+    v = v.replace(/^https?:\/\//,"").split("/")[0].replace(/^www\./,"");
+    if (!v || v.includes(" ") || (!v.includes(".") && !v.startsWith("*."))) return "";
+    return v;
+  }
 
-    qsa("[data-domain-remove]").forEach((b) => b.addEventListener("click", () => {
-      const d = state.domains.splice(Number(b.dataset.domainRemove), 1)[0];
-      log("Domain removed", d);
-      save();
-      toast("Domain removed", d);
-    }));
-
-    qsa("[data-ip-remove]").forEach((b) => b.addEventListener("click", () => {
-      const ip = state.ips.splice(Number(b.dataset.ipRemove), 1)[0];
-      log("IP removed", ip);
-      save();
-      toast("IP removed", ip);
+  function renderDomains() {
+    $("domainList").innerHTML = state.domains.map((d,i) =>
+      '<label class="check-row"><input type="checkbox" data-domain-index="' + i + '" ' + (selectedDomains.has(d) ? "checked" : "") + '><span>' + esc(d) + '</span></label>'
+    ).join("") || '<div class="check-row">⚠️ No blocked domains yet.</div>';
+    qsa("[data-domain-index]").forEach(cb => cb.addEventListener("change", () => {
+      const d = state.domains[Number(cb.dataset.domainIndex)];
+      if (cb.checked) selectedDomains.add(d); else selectedDomains.delete(d);
     }));
   }
 
-  function renderRules() {
-    $("ruleTable").innerHTML = state.rules.map((r) =>
-      "<tr><td>" + r.id + "</td><td>" + esc(r.ip) + "</td><td>" + esc(r.port) + "</td><td>" +
-      esc(r.protocol) + '</td><td class="' + (r.action === "BLOCK" ? "action-block" : "action-allow") + '">' +
-      esc(r.action) + '</td><td><button class="mini-btn danger" data-rule-remove="' + r.id + '">Remove</button></td></tr>'
-    ).join("") || '<tr><td colspan="6" class="empty">No firewall rules.</td></tr>';
+  $("addDomainBtn").addEventListener("click", () => {
+    const domain = normalizeDomain($("domainInput").value);
+    if (!domain) { toast("Invalid", "Enter a valid domain like example.com."); return; }
+    if (state.domains.includes(domain)) { toast("Duplicate", domain + " is already listed."); return; }
+    state.domains.push(domain);
+    $("domainInput").value = "";
+    log("Block Domain", domain);
+    save();
+    renderNetwork();
+    renderOverview();
+    toast("Block Website", "✅ " + domain + " added to blocked sites.");
+  });
 
-    qsa("[data-rule-remove]").forEach((b) => b.addEventListener("click", () => {
-      const id = Number(b.dataset.ruleRemove);
-      const r = state.rules.find((x) => x.id === id);
-      state.rules = state.rules.filter((x) => x.id !== id);
-      log("Rule removed", r ? r.action + " " + r.protocol + " " + r.ip + ":" + r.port : "Rule " + id);
-      save();
-      toast("Rule removed", "Workspace updated.");
-    }));
-  }
+  $("removeDomainBtn").addEventListener("click", () => {
+    if (!selectedDomains.size) { toast("Unblock Website", "Check one or more domains to remove."); return; }
+    const removed = state.domains.filter(d => selectedDomains.has(d));
+    state.domains = state.domains.filter(d => !selectedDomains.has(d));
+    selectedDomains.clear();
+    log("Unblock Website", "Removed " + removed.length + " domain(s): " + removed.slice(0,6).join(", "));
+    save();
+    renderNetwork();
+    renderOverview();
+    toast("Unblock Website", "✅ Removed " + removed.length + " domains.");
+  });
 
-  function renderSignatures() {
-    $("sigTable").innerHTML = state.signatures.map((s) =>
-      "<tr><td>" + esc(s.name) + "</td><td>" + esc(s.host || "—") + "</td><td>" + esc(s.domain || "—") +
-      "</td><td>" + esc(s.range || "—") + "</td><td>" + esc(s.protocol) +
-      '</td><td><button class="mini-btn danger" data-sig-remove="' + s.id + '">Remove</button></td></tr>'
-    ).join("") || '<tr><td colspan="6" class="empty">No application signatures.</td></tr>';
+  $("refreshDomainBtn").addEventListener("click", renderDomains);
+  $("selectAllDomainsBtn").addEventListener("click", () => {
+    state.domains.forEach(d => selectedDomains.add(d));
+    renderDomains();
+  });
 
-    qsa("[data-sig-remove]").forEach((b) => b.addEventListener("click", () => {
-      const id = Number(b.dataset.sigRemove);
-      const s = state.signatures.find((x) => x.id === id);
-      state.signatures = state.signatures.filter((x) => x.id !== id);
-      log("Signature removed", s ? s.name : "Signature " + id);
-      save();
-      toast("Signature removed", s ? s.name : "");
-    }));
-  }
-
-  function renderHistory() {
-    $("historyList").innerHTML = state.history.map((h) =>
-      '<div class="list-row"><time>' + new Date(h.at).toLocaleString() + "</time><div><strong>" +
-      esc(h.action) + "</strong><small>" + esc(h.detail) + "</small></div></div>"
-    ).join("") || '<div class="empty">No workspace history.</div>';
-  }
-
-  function renderSettings() {
-    $("quicToggle").checked = !!state.settings.disable_quic;
-    $("dohToggle").checked = !!state.settings.block_doh;
-    $("ttlInput").value = state.settings.temp_ip_ttl || 900;
-    if ($("ipBlockToggle")) $("ipBlockToggle").checked = state.settings.enable_ip_blocking !== false;
-  }
-
-  function securityScore() {
-    const active = state.threats.filter((t) => t.status !== "Resolved");
-    const penalty = active.reduce((sum, t) => sum + (t.severity === "Critical" ? 12 : t.severity === "High" ? 8 : t.severity === "Medium" ? 4 : 2), 0);
-    const unknownPenalty = state.devices.filter((d) => d.status === "Unknown").length * 4;
-    let score = 90 - penalty - unknownPenalty;
-    if (state.settings.disable_quic) score += 2;
-    if (state.settings.enable_ip_blocking !== false) score += 3;
-    if (state.settings.block_doh) score += 2;
-    return Math.max(35, Math.min(100, score));
-  }
-
-  function renderTrafficChart(uploadId, downloadId) {
-    if (!$(uploadId) || !$(downloadId)) return;
-    const up = state.traffic.upload.slice(-24);
-    const down = state.traffic.download.slice(-24);
-    const max = Math.max(8, ...up, ...down);
-    const x0 = 48, x1 = 742, y0 = 30, y1 = 232;
-    const points = (arr) => arr.map((v, i) => ({
-      x: x0 + (x1 - x0) * i / Math.max(1, arr.length - 1),
-      y: y1 - (v / max) * (y1 - y0)
-    }));
-    const a = points(up), b = points(down);
-    $(uploadId).setAttribute("points", a.map((p) => p.x.toFixed(1) + "," + p.y.toFixed(1)).join(" "));
-    $(downloadId).setAttribute("points", b.map((p) => p.x.toFixed(1) + "," + p.y.toFixed(1)).join(" "));
-  }
-
-  function renderThreatBars() {
-    if (!$("threatBars")) return;
-    const levels = ["Critical", "High", "Medium", "Low"];
-    const counts = levels.map((s) => state.threats.filter((t) => t.severity === s && t.status !== "Resolved").length);
-    const max = Math.max(1, ...counts);
-    $("threatBars").innerHTML = levels.map((s, i) =>
-      '<div class="threat-row"><span>' + s + '</span><div class="threat-track"><div class="threat-fill sev-' +
-      s.toLowerCase() + '" style="width:' + Math.round(counts[i] / max * 100) + '%"></div></div><b>' + counts[i] + '</b></div>'
-    ).join("");
+  function deviceLabel(d) {
+    const marker = d.status === "blocked" ? "⛔" : "🟢";
+    return marker + " " + d.ip + " (" + d.mac + ") · " + d.vendor + " · " + d.type;
   }
 
   function renderDevices() {
-    if (!$("deviceTable")) return;
-    const q = $("deviceSearch").value.toLowerCase().trim();
-    const f = $("deviceStatusFilter").value;
-    const rows = state.devices.filter((d) =>
-      (!q || [d.hostname,d.ip,d.mac,d.owner].join(" ").toLowerCase().includes(q)) &&
-      (!f || d.status === f)
-    );
-    $("deviceTable").innerHTML = rows.map((d) =>
-      '<tr><td><strong>' + esc(d.hostname) + '</strong><br><small>' + esc(d.owner) + '</small></td><td>' + esc(d.ip) +
-      '</td><td>' + esc(d.mac) + '</td><td>' + esc(d.owner) + '</td><td><span class="' +
-      (d.status === "Blocked" ? "action-block" : d.status === "Allowed" ? "action-allow" : "") + '">' + esc(d.status) +
-      '</span></td><td>' + new Date(d.lastSeen).toLocaleString() + '</td><td><button class="mini-btn ' +
-      (d.status === "Blocked" ? "" : "danger") + '" data-device-toggle="' + d.id + '">' +
-      (d.status === "Blocked" ? "Unblock" : "Block") + '</button></td></tr>'
-    ).join("") || '<tr><td colspan="7" class="empty">No devices match.</td></tr>';
-    qsa("[data-device-toggle]").forEach((b) => b.addEventListener("click", () => {
-      const d = state.devices.find((x) => x.id === b.dataset.deviceToggle);
-      if (!d) return;
-      d.status = d.status === "Blocked" ? "Allowed" : "Blocked";
-      log("Device " + d.status.toLowerCase(), d.hostname + " · " + d.ip);
-      save();
-      toast("Device " + d.status, d.hostname);
-    }));
+    const active = state.devices.filter(d => d.status !== "blocked");
+    const blocked = state.devices.filter(d => d.status === "blocked");
+    $("activeDevices").innerHTML = active.map(d => '<option value="' + esc(d.id) + '">' + esc(deviceLabel(d)) + '</option>').join("");
+    $("blockedDevices").innerHTML = blocked.map(d => '<option value="' + esc(d.id) + '">' + esc(deviceLabel(d)) + '</option>').join("");
+  }
+
+  $("scanDevicesBtn").addEventListener("click", () => {
+    state.devices.forEach((d,i) => d.lastSeen = new Date(Date.now() - i*40000).toISOString());
+    const last = state.traffic.download.at(-1) || 0;
+    state.traffic.download.push(Math.max(0, +(last + (((state.history.length % 5)-2)*.3)).toFixed(1)));
+    state.traffic.upload.push(Math.max(0, +((state.traffic.upload.at(-1)||0) + (((state.history.length % 3)-1)*.15)).toFixed(1)));
+    state.traffic.download = state.traffic.download.slice(-30);
+    state.traffic.upload = state.traffic.upload.slice(-30);
+    log("Scan Devices", "Detected " + state.devices.length + " device(s) on portfolio demo network.");
+    save();
+    renderNetwork();
+    renderOverview();
+    toast("Device Scan", "Detected " + state.devices.length + " devices.");
+  });
+
+  $("blockDeviceBtn").addEventListener("click", () => {
+    const id = $("activeDevices").value;
+    if (!id) { toast("Block Device", "Select a device to block."); return; }
+    const d = state.devices.find(x => x.id === id);
+    d.status = "blocked";
+    log("Blocked", d.ip + " (" + d.mac + ")");
+    save(); renderNetwork(); renderOverview();
+    toast("Block Device", "⛔ " + d.ip + " blocked.");
+  });
+
+  $("unblockDeviceBtn").addEventListener("click", () => {
+    const id = $("blockedDevices").value;
+    if (!id) { toast("Unblock Device", "Select a blocked device."); return; }
+    const d = state.devices.find(x => x.id === id);
+    d.status = "active";
+    log("Unblocked", d.ip + " (" + d.mac + ")");
+    save(); renderNetwork(); renderOverview();
+    toast("Unblock Device", "✅ " + d.ip + " unblocked.");
+  });
+
+  function renderSignatures() {
+    $("signatureList").innerHTML = state.signatures.map(s =>
+      '<option value="' + s.id + '">' + esc(s.id + " | " + s.name + " | " + (s.pattern || "—") + " | " + (s.ipRange || "—") + " | " + s.protocol) + '</option>'
+    ).join("") || '<option disabled>(No app signatures configured)</option>';
+  }
+
+  $("addSignatureBtn").addEventListener("click", () => {
+    const name = $("appNameInput").value.trim();
+    if (!name) { toast("Application Signatures", "Please provide an app name."); return; }
+    const next = Math.max(0,...state.signatures.map(s=>s.id))+1;
+    state.signatures.push({
+      id:next,
+      name,
+      pattern:$("appPatternInput").value.trim(),
+      ipRange:$("appIpRangeInput").value.trim(),
+      protocol:$("appProtocolInput").value
+    });
+    ["appNameInput","appPatternInput","appIpRangeInput"].forEach(id => $(id).value = "");
+    log("Add Signature", name);
+    save(); renderNetwork(); renderOverview();
+    toast("Application Signatures", "✅ Signature added.");
+  });
+
+  $("removeSignatureBtn").addEventListener("click", () => {
+    const id = Number($("signatureList").value);
+    if (!id) { toast("Application Signatures", "Select a signature to remove."); return; }
+    const s = state.signatures.find(x=>x.id===id);
+    state.signatures = state.signatures.filter(x=>x.id!==id);
+    log("Remove Signature", s?.name || String(id));
+    save(); renderNetwork(); renderOverview();
+  });
+
+  $("refreshSignatureBtn").addEventListener("click", renderSignatures);
+
+  function drawTraffic() {
+    const canvas = $("trafficCanvas");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const rect = canvas.getBoundingClientRect();
+    const w = Math.max(500, Math.round(rect.width * devicePixelRatio));
+    const h = Math.max(220, Math.round(rect.height * devicePixelRatio));
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    ctx.clearRect(0,0,w,h);
+    const pad = 32*devicePixelRatio;
+    const max = Math.max(10,...state.traffic.download,...state.traffic.upload);
+    ctx.strokeStyle = "#e5e7eb"; ctx.lineWidth = devicePixelRatio;
+    for (let i=0;i<5;i++) { const y=pad+(h-pad*2)*i/4; ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(w-pad,y); ctx.stroke(); }
+    function line(arr,color) {
+      ctx.strokeStyle=color; ctx.lineWidth=2*devicePixelRatio; ctx.beginPath();
+      arr.forEach((v,i) => {
+        const x=pad+(w-pad*2)*i/Math.max(1,arr.length-1);
+        const y=h-pad-(v/max)*(h-pad*2);
+        if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+      });
+      ctx.stroke();
+    }
+    line(state.traffic.download,"#0078d7");
+    line(state.traffic.upload,"#28a745");
+  }
+
+  function renderNetwork() {
+    renderDomains();
+    renderDevices();
+    renderSignatures();
+    drawTraffic();
+  }
+
+  function threatText(t) {
+    return "[" + new Date(t.timestamp).toLocaleString() + "] " + t.severity + " | " + t.src + " → " + t.dst + " | " + t.protocol + " | " + t.description;
   }
 
   function renderThreats() {
-    if (!$("threatList")) return;
-    const active = state.threats.filter((t) => t.status !== "Resolved");
-    const critical = active.filter((t) => t.severity === "Critical").length;
-    const high = active.filter((t) => t.severity === "High").length;
-    const acknowledged = active.filter((t) => t.status === "Acknowledged").length;
-    $("threatSummary").innerHTML = [
-      ["Active", active.length, "unresolved events"],
-      ["Critical", critical, "immediate"],
-      ["High", high, "elevated"],
-      ["Acknowledged", acknowledged, "under review"]
-    ].map((x) => '<article class="summary-card"><span>' + x[0] + '</span><strong>' + x[1] + '</strong><small>' + x[2] + '</small></article>').join("");
-
-    $("threatList").innerHTML = state.threats.map((t) =>
-      '<div class="threat-card ' + t.severity + '"><div><strong>' + esc(t.severity) + '</strong><br><time>' +
-      new Date(t.at).toLocaleString() + '</time></div><div><h4>' + esc(t.title) + '</h4><p>' +
-      esc(t.src + " → " + t.dst + " · " + t.protocol + " · " + t.description) + '</p></div><div><span class="' +
-      (t.status === "Resolved" ? "action-allow" : "action-block") + '">' + esc(t.status) + '</span>' +
-      (t.status !== "Resolved" ? ' <button class="mini-btn" data-threat-ack="' + t.id + '">Ack</button> <button class="mini-btn" data-threat-resolve="' + t.id + '">Resolve</button>' : '') +
-      '</div></div>'
-    ).join("");
-
-    qsa("[data-threat-ack]").forEach((b) => b.addEventListener("click", () => {
-      const t = state.threats.find((x) => x.id === b.dataset.threatAck);
-      if (!t) return;
-      t.status = "Acknowledged";
-      log("Threat acknowledged", t.title);
-      save();
-    }));
-    qsa("[data-threat-resolve]").forEach((b) => b.addEventListener("click", () => {
-      const t = state.threats.find((x) => x.id === b.dataset.threatResolve);
-      if (!t) return;
-      t.status = "Resolved";
-      log("Threat resolved", t.title);
-      save();
-    }));
+    $("threatList").innerHTML = state.threats.map(t => '<option value="' + t.id + '">' + esc(threatText(t)) + '</option>').join("") || '<option disabled>(No detected threats yet.)</option>';
   }
 
-  function renderTraffic() {
-    if (!$("trafficKpis")) return;
-    const up = state.traffic.upload.at(-1) || 0;
-    const down = state.traffic.download.at(-1) || 0;
-    const total = state.traffic.destinations.reduce((s, d) => s + d.mb, 0);
-    $("trafficKpis").innerHTML = [
-      ["Upload", up.toFixed(1) + " Mbps", "latest sample"],
-      ["Download", down.toFixed(1) + " Mbps", "latest sample"],
-      ["Modeled", total + " MB", "destinations"],
-      ["Samples", state.traffic.upload.length, "retained"]
-    ].map((x) => '<article class="summary-card"><span>' + x[0] + '</span><strong>' + x[1] + '</strong><small>' + x[2] + '</small></article>').join("");
-    renderTrafficChart("uploadLineLarge", "downloadLineLarge");
-    $("protocolMix").innerHTML = Object.entries(state.traffic.protocols).map(([name, value]) =>
-      '<div class="protocol-row"><span>' + esc(name) + '</span><div class="protocol-track"><div class="protocol-fill" style="width:' +
-      value + '%"></div></div><b>' + value + '%</b></div>'
-    ).join("");
-    $("topDestinations").innerHTML = state.traffic.destinations.map((d) =>
-      '<div class="list-row"><div><strong>' + esc(d.name) + '</strong><small>' + esc(d.host) + '</small></div><b>' + d.mb + ' MB</b></div>'
-    ).join("");
+  $("refreshThreatsBtn").addEventListener("click", renderThreats);
+  $("clearThreatsBtn").addEventListener("click", () => {
+    if (currentUser?.role !== "admin") { toast("Threats", "Admin access required."); return; }
+    if (!confirm("Are you sure you want to delete all threat alerts?")) return;
+    state.threats = [];
+    log("Cleared Threats", "All threat alerts cleared.");
+    save(); renderThreats(); renderOverview();
+    toast("Cleared", "All threat alerts cleared.");
+  });
+
+  function ruleText(r) { return r.action + " " + r.protocol + " " + r.ip + ":" + r.port; }
+  function renderRules() {
+    $("rulesList").innerHTML = state.rules.map(r => '<option value="' + r.id + '">' + esc(ruleText(r)) + '</option>').join("") || '<option disabled>(No custom rules configured)</option>';
   }
 
-  function renderAll() {
+  $("addRuleBtn").addEventListener("click", () => {
+    const ip = $("ruleIpInput").value.trim();
+    let port = $("rulePortInput").value.trim() || "ANY";
+    const protocol = $("ruleProtocolInput").value;
+    const action = $("ruleActionInput").value;
+    if (!ip) { toast("Firewall Rules", "Please enter an IP address."); return; }
+    if (port !== "ANY" && !/^\d+$/.test(port)) { toast("Firewall Rules", 'Port must be numeric or "ANY".'); return; }
+    if (state.rules.some(r=>r.ip===ip&&r.port===port&&r.protocol===protocol&&r.action===action)) { toast("Firewall Rules","Rule already exists.");return; }
+    const id = Math.max(0,...state.rules.map(r=>r.id))+1;
+    const rule={id,ip,port,protocol,action};
+    state.rules.push(rule);
+    $("ruleIpInput").value=""; $("rulePortInput").value="";
+    log("Add Rule", ruleText(rule));
+    save(); renderRules(); renderOverview();
+    toast("Firewall Rules","✅ Rule added: "+ruleText(rule));
+  });
+
+  $("removeRuleBtn").addEventListener("click", () => {
+    const id=Number($("rulesList").value);
+    if(!id){toast("Firewall Rules","Select a rule to remove.");return;}
+    const rule=state.rules.find(r=>r.id===id);
+    state.rules=state.rules.filter(r=>r.id!==id);
+    log("Remove Rule", rule?ruleText(rule):String(id));
+    save(); renderRules(); renderOverview();
+  });
+  $("refreshRulesBtn").addEventListener("click", renderRules);
+
+  function filteredHistory() {
+    const q=$("historySearchInput").value.trim().toLowerCase();
+    let rows=[...state.history];
+    if(q){
+      const range=q.match(/^(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})$/);
+      if(range){
+        const a=new Date(range[1]+"T00:00:00"),b=new Date(range[2]+"T23:59:59");
+        rows=rows.filter(h=>{const d=new Date(h.timestamp);return d>=a&&d<=b;});
+      } else {
+        rows=rows.filter(h=>[h.username,h.action,h.description,h.timestamp.slice(0,10)].join(" ").toLowerCase().includes(q));
+      }
+    }
+    rows.sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
+    if($("historySort").value==="Descending")rows.reverse();
+    return rows;
+  }
+
+  function renderHistory() {
+    const rows=filteredHistory();
+    $("historyList").innerHTML=rows.map((h,i)=>
+      '<option value="'+i+'">'+esc("["+new Date(h.timestamp).toLocaleString()+"] 👤 "+h.username.padEnd(12)+" | ⚙️ "+h.action.padEnd(15)+" | 📝 "+h.description)+'</option>'
+    ).join("")||'<option disabled>(No logs yet)</option>';
+  }
+  $("historySearchBtn").addEventListener("click",renderHistory);
+  $("historySearchInput").addEventListener("input",()=>{if(!$("historySearchInput").value)renderHistory();});
+  $("historySort").addEventListener("change",renderHistory);
+  $("archiveLogsBtn").addEventListener("click",()=>{
+    const cutoff=Date.now()-60000;
+    const old=state.history.filter(h=>new Date(h.timestamp).getTime()<cutoff);
+    if(!old.length){toast("Archive","No logs older than 1 minute found to archive.");return;}
+    state.archivedHistory.unshift(...old);
+    state.history=state.history.filter(h=>new Date(h.timestamp).getTime()>=cutoff);
+    log("Archive Logs","🗄️ Archived "+old.length+" log(s) successfully.");
+    save();renderHistory();renderOverview();toast("Archive","Archived "+old.length+" log(s).");
+  });
+
+  function applyTheme(){
+    document.body.classList.toggle("dark-mode",!!state.settings.dark_mode);
+  }
+  function renderSettings(){
+    $("settingAutoStart").checked=!!state.settings.auto_start;
+    $("settingDetailedLogging").checked=!!state.settings.detailed_logging;
+    $("settingDarkMode").checked=!!state.settings.dark_mode;
+    $("settingDnsProxy").checked=!!state.settings.dns_proxy_enabled;
+    $("settingNetsh").checked=!!state.settings.create_netsh_blocks;
+  }
+  $("saveSettingsBtn").addEventListener("click",()=>{
+    state.settings={
+      auto_start:$("settingAutoStart").checked,
+      detailed_logging:$("settingDetailedLogging").checked,
+      dark_mode:$("settingDarkMode").checked,
+      dns_proxy_enabled:$("settingDnsProxy").checked,
+      create_netsh_blocks:$("settingNetsh").checked
+    };
+    log("Settings Saved","Application settings updated.");
+    save();applyTheme();toast("Settings Saved","Configuration saved.");
+  });
+  $("resetSettingsBtn").addEventListener("click",()=>{
+    state.settings={auto_start:false,detailed_logging:false,dark_mode:false,dns_proxy_enabled:true,create_netsh_blocks:true};
+    log("Settings Reset","Settings reset to defaults.");
+    save();applyTheme();renderSettings();toast("Settings","✅ Settings reset to defaults.");
+  });
+  $("reloadListsBtn").addEventListener("click",()=>{renderNetwork();log("Reload Firewall Lists","Firewall lists reloaded in demo workspace.");toast("Firewall Lists","✅ Firewall lists reloaded.");});
+  $("backupDbsBtn").addEventListener("click",()=>{
+    const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob),a=document.createElement("a");
+    a.href=url;a.download="pyrewall-demo-backup-"+new Date().toISOString().replace(/[:.]/g,"-")+".json";a.click();setTimeout(()=>URL.revokeObjectURL(url),500);
+    log("Backup DBs","Portfolio workspace backup exported.");
+    toast("Backup Complete","Demo workspace backup downloaded.");
+  });
+  $("openDbFolderBtn").addEventListener("click",()=>toast("Open DB Folder","Available only in the local Windows build."));
+
+  function selectedUserName(){
+    const val=$("usersList").value;
+    return val||"";
+  }
+  function renderUsers(){
+    $("usersList").innerHTML=state.users.map(u=>'<option value="'+esc(u.username)+'">'+(u.role==="admin"?"⭐":"👤")+" "+esc(u.username)+" ("+esc(u.role)+")</option>").join("")||'<option disabled>(No users found)</option>';
+  }
+  $("addUserBtn").addEventListener("click",()=>{
+    const username=$("newUsernameInput").value.trim(),password=$("newPasswordInput").value,role=$("newRoleInput").value;
+    if(!username||!password){toast("Warning","Please fill out username and password.");return;}
+    if(state.users.some(u=>u.username===username)){toast("Warning","User already exists.");return;}
+    state.users.push({username,password,role});
+    log("Add User","Added new user: "+username+" ("+role+")");
+    $("newUsernameInput").value="";$("newPasswordInput").value="";
+    save();renderUsers();renderOverview();toast("Success","✅ User "+username+" added.");
+  });
+  $("updatePasswordBtn").addEventListener("click",()=>{
+    const username=$("newUsernameInput").value.trim()||selectedUserName(),password=$("newPasswordInput").value;
+    if(!username||!password){toast("Update User","Please provide username and new password.");return;}
+    const u=state.users.find(x=>x.username===username);
+    if(!u){toast("Update User","User not found.");return;}
+    u.password=password;log("Update User","Updated password for user: "+username);
+    $("newPasswordInput").value="";save();toast("Update User","🔑 Password for "+username+" updated.");
+  });
+  $("removeUserBtn").addEventListener("click",()=>{
+    const username=selectedUserName()||$("newUsernameInput").value.trim();
+    if(!username){toast("Remove User","Please select a user to remove.");return;}
+    if(username===currentUser?.username){toast("Remove User","You cannot delete the currently logged-in admin.");return;}
+    state.users=state.users.filter(u=>u.username!==username);
+    log("Remove User","Removed user: "+username);
+    save();renderUsers();renderOverview();toast("Remove User","❎ User "+username+" removed.");
+  });
+  $("refreshUsersBtn").addEventListener("click",renderUsers);
+
+  $("usersList").addEventListener("change",()=>{
+    const u=state.users.find(x=>x.username===$("usersList").value);
+    if(u){$("newUsernameInput").value=u.username;$("newRoleInput").value=u.role;}
+  });
+
+  function renderAll(){
+    renderStatus();
     renderOverview();
-    renderDevices();
     renderNetwork();
-    renderRules();
-    renderSignatures();
     renderThreats();
-    renderTraffic();
+    renderRules();
     renderHistory();
     renderSettings();
+    renderUsers();
   }
 
-  $("domainForm").addEventListener("submit", (e) => {
-    e.preventDefault();
-    const value = $("domainInput").value.trim().toLowerCase().replace(/^https?:\/\//, "").split("/")[0].replace(/^www\./, "");
-    if (!value) return;
-    if (state.domains.includes(value)) {
-      toast("Already listed", value);
-      return;
-    }
-    state.domains.push(value);
-    $("domainInput").value = "";
-    log("Domain added", value);
-    save();
-    toast("Domain added", value);
-  });
+  window.addEventListener("resize",()=>{if(!$("desktopApp").hidden)drawTraffic();});
 
-  $("ipForm").addEventListener("submit", (e) => {
-    e.preventDefault();
-    const value = $("ipInput").value.trim();
-    if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(value)) {
-      toast("Invalid IP", "Enter an IPv4 address.");
-      return;
-    }
-    if (state.ips.includes(value)) {
-      toast("Already listed", value);
-      return;
-    }
-    state.ips.push(value);
-    $("ipInput").value = "";
-    log("IP added", value);
-    save();
-    toast("IP added", value);
-  });
-
-  $("ruleForm").addEventListener("submit", (e) => {
-    e.preventDefault();
-    const ip = $("ruleIp").value.trim();
-    const port = $("rulePort").value.trim() || "ANY";
-    const protocol = $("ruleProtocol").value;
-    const action = $("ruleAction").value;
-    if (!ip) return;
-    const id = Math.max(0, ...state.rules.map((r) => r.id)) + 1;
-    state.rules.push({ id, ip, port, protocol, action });
-    $("ruleIp").value = "";
-    $("rulePort").value = "ANY";
-    log("Rule added", action + " " + protocol + " " + ip + ":" + port);
-    save();
-    toast("Rule added", action + " " + ip);
-  });
-
-  $("sigForm").addEventListener("submit", (e) => {
-    e.preventDefault();
-    const name = $("sigName").value.trim();
-    if (!name) return;
-    const id = Math.max(0, ...state.signatures.map((s) => s.id)) + 1;
-    state.signatures.push({
-      id,
-      name,
-      host: $("sigHost").value.trim(),
-      domain: $("sigDomain").value.trim(),
-      range: $("sigRange").value.trim(),
-      protocol: $("sigProtocol").value
-    });
-    ["sigName", "sigHost", "sigDomain", "sigRange"].forEach((id) => $(id).value = "");
-    log("Signature added", name);
-    save();
-    toast("Signature added", name);
-  });
-
-  $("saveSettingsBtn").addEventListener("click", () => {
-    state.settings.disable_quic = $("quicToggle").checked;
-    state.settings.block_doh = $("dohToggle").checked;
-    state.settings.enable_ip_blocking = $("ipBlockToggle") ? $("ipBlockToggle").checked : true;
-    state.settings.temp_ip_ttl = Math.max(30, Math.min(86400, Number($("ttlInput").value) || 900));
-    log("Settings updated", "Browser policy settings saved.");
-    save();
-    toast("Settings saved", "Persistent browser workspace updated.");
-  });
-
-  $("clearHistoryBtn").addEventListener("click", () => {
-    state.history = [];
-    save();
-    toast("History cleared", "Workspace history removed.");
-  });
-
-  $("resetBtn").addEventListener("click", () => {
-    if (!confirm("Reset this browser workspace?")) return;
-    state = seed();
-    save();
-    toast("Workspace reset", "Initial policy state restored.");
-  });
-
-  $("exportBtn").addEventListener("click", () => {
-    const blob = new Blob([JSON.stringify({ version: 1, exported_at: new Date().toISOString(), workspace: state }, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "pyrewall-browser-workspace.json";
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  });
-
-  $("importInput").addEventListener("change", async () => {
-    const file = $("importInput").files?.[0];
-    if (!file) return;
-    try {
-      const parsed = JSON.parse(await file.text());
-      const next = parsed.workspace || parsed;
-      if (!next || !Array.isArray(next.domains) || !Array.isArray(next.rules)) throw new Error("Invalid workspace file.");
-      const defaults = seed();
-      state = { ...defaults, ...next, settings: { ...defaults.settings, ...(next.settings || {}) } };
-      log("Workspace imported", file.name);
-      save();
-      toast("Workspace imported", file.name);
-    } catch (e) {
-      toast("Import failed", e.message);
-    }
-    $("importInput").value = "";
-  });
-
-  if ($("deviceSearch")) $("deviceSearch").addEventListener("input", renderDevices);
-  if ($("deviceStatusFilter")) $("deviceStatusFilter").addEventListener("change", renderDevices);
-  if ($("discoverBtn")) $("discoverBtn").addEventListener("click", () => {
-    state.devices.forEach((d, i) => { d.lastSeen = new Date(Date.now() - i * 45000).toISOString(); });
-    log("Device discovery refreshed", "Simulated ARP inventory refresh completed.");
-    save();
-    toast("Discovery complete", state.devices.length + " devices refreshed.");
-  });
-  if ($("generateThreatBtn")) $("generateThreatBtn").addEventListener("click", () => {
-    const levels = ["Low","Medium","High","Critical"];
-    const severity = levels[state.threats.length % levels.length];
-    const d = state.devices[state.threats.length % state.devices.length];
-    state.threats.unshift({
-      id: "T" + Date.now(),
-      severity,
-      status: "Open",
-      src: d.ip,
-      dst: "203.0.113." + (50 + state.threats.length),
-      protocol: "TCP",
-      title: "Simulated security event",
-      description: "Portfolio-safe sample threat generated for demonstration.",
-      at: new Date().toISOString()
-    });
-    log("Threat event generated", severity + " sample event from " + d.hostname);
-    save();
-    toast("Sample threat generated", severity);
-  });
-  if ($("sampleTrafficBtn")) $("sampleTrafficBtn").addEventListener("click", () => {
-    const i = state.history.length;
-    const u = state.traffic.upload.at(-1) || 2;
-    const d = state.traffic.download.at(-1) || 6;
-    state.traffic.upload.push(Math.max(.3, Math.round((u + (((i * 3) % 9) - 4) * .18) * 10) / 10));
-    state.traffic.download.push(Math.max(.5, Math.round((d + (((i * 5) % 11) - 5) * .28) * 10) / 10));
-    state.traffic.upload = state.traffic.upload.slice(-48);
-    state.traffic.download = state.traffic.download.slice(-48);
-    log("Traffic sampled", "Demo telemetry sample added.");
-    save();
-    toast("Traffic sampled", "Telemetry updated.");
-  });
-
-  renderAll();
+  try {
+    const saved=JSON.parse(localStorage.getItem(SESSION_KEY)||"null");
+    const user=saved&&state.users.find(u=>u.username===saved.username);
+    if(user){$("firstRunBanner").hidden=true;showApp(user);}
+  } catch (_) {}
 })();
