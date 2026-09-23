@@ -5,22 +5,25 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#07111f">
   <meta name="description" content="PyreWall browser workspace for firewall policy planning, rules, signatures, and audit history.">
-  <title>PyreWall Browser Workspace</title>
+  <title>PyreWall Unified Security Platform</title>
   <link rel="stylesheet" href="./styles.css">
   <script src="./app.js" defer></script>
 </head>
 <body>
 <div class="shell">
   <aside class="sidebar">
-    <div class="brand"><div class="shield">P</div><div><strong>PyreWall</strong><span>Browser Workspace</span></div></div>
-    <div class="mode"><i></i><div><strong>Policy workspace</strong><span>Saved locally in this browser</span></div></div>
+    <div class="brand"><div class="shield">P</div><div><strong>PyreWall</strong><span>Unified Security Platform</span></div></div>
+    <div class="mode"><i></i><div><strong>Security control plane</strong><span>Portfolio demo · local enforcement ready</span></div></div>
     <nav>
-      <button class="nav active" data-page="overview">Overview</button>
-      <button class="nav" data-page="network">Network Control</button>
+      <button class="nav active" data-page="overview">Security Overview</button>
+      <button class="nav" data-page="devices">Devices</button>
+      <button class="nav" data-page="network">Web Control</button>
+      <button class="nav" data-page="signatures">Applications</button>
       <button class="nav" data-page="rules">Firewall Rules</button>
-      <button class="nav" data-page="signatures">App Signatures</button>
-      <button class="nav" data-page="history">History</button>
-      <button class="nav" data-page="settings">Settings</button>
+      <button class="nav" data-page="threats">Threat Center</button>
+      <button class="nav" data-page="traffic">Traffic Analytics</button>
+      <button class="nav" data-page="history">Audit History</button>
+      <button class="nav" data-page="settings">Engine & Settings</button>
     </nav>
     <div class="local-note"><strong>Real enforcement</strong><p>Windows Firewall + WinDivert actions require the local PyreWall backend running as Administrator.</p></div>
   </aside>
@@ -38,12 +41,12 @@
     <section class="page active" data-panel="overview">
       <div class="hero">
         <div>
-          <p class="eyebrow">Local-first policy console</p>
-          <h2>Build firewall policy in the browser. Enforce it locally when ready.</h2>
-          <p>This public workspace is directly usable for organizing blocked domains, IPs, rules, signatures, and firewall settings. Your changes persist in this browser. Real packet filtering still requires the Windows PyreWall service.</p>
+          <p class="eyebrow">Next-generation firewall control plane</p>
+          <h2>One security view for policy, devices, threats, traffic, and Windows enforcement.</h2>
+          <p>PyreWall Unified brings domain filtering, IP blocking, connected-device control, application signatures, firewall rules, threat visibility, traffic analytics, and audit history into one security workspace. Real packet filtering remains on the privileged Windows engine.</p>
           <div class="hero-actions"><button class="btn primary" data-go="network">Open controls</button><button class="btn secondary" data-go="settings">Local engine setup</button></div>
         </div>
-        <div class="engine-card"><span>ENFORCEMENT STATUS</span><strong>Workspace only</strong><small>Connect the local Windows backend for WinDivert enforcement.</small><div class="engine-line"><i></i><span>Browser policy</span><b>Ready</b></div><div class="engine-line muted"><i></i><span>WinDivert</span><b>Local only</b></div></div>
+        <div class="engine-card security-orb-card"><span>SECURITY POSTURE</span><strong id="securityScore">—</strong><small>Calculated from policy coverage, device posture, and unresolved threats.</small><div class="engine-line"><i></i><span>Policy workspace</span><b>Ready</b></div><div class="engine-line muted"><i></i><span>Windows enforcement</span><b>Local agent</b></div></div>
       </div>
 
       <div class="stats">
@@ -51,13 +54,33 @@
         <article><span>Blocked IPs</span><strong id="statIps">0</strong><small>Manual address policy</small></article>
         <article><span>Firewall rules</span><strong id="statRules">0</strong><small>IP / port / protocol</small></article>
         <article><span>App signatures</span><strong id="statSigs">0</strong><small>Service patterns</small></article>
-        <article><span>Audit events</span><strong id="statHistory">0</strong><small>Workspace activity</small></article>
+        <article><span>Open threats</span><strong id="statThreats">0</strong><small>Security events</small></article>
       </div>
 
+      <div class="security-visual-grid">
+        <article class="panel visual-wide">
+          <div class="panel-head"><div><p class="eyebrow">Traffic telemetry</p><h3>Upload / download trend</h3></div></div>
+          <svg class="traffic-chart" viewBox="0 0 760 250" aria-label="Traffic trend">
+            <g class="chart-grid"><line x1="45" y1="30" x2="742" y2="30"/><line x1="45" y1="84" x2="742" y2="84"/><line x1="45" y1="138" x2="742" y2="138"/><line x1="45" y1="192" x2="742" y2="192"/><line x1="45" y1="232" x2="742" y2="232"/></g>
+            <polyline id="uploadLine" class="traffic-line upload" points=""></polyline>
+            <polyline id="downloadLine" class="traffic-line download" points=""></polyline>
+          </svg>
+        </article>
+        <article class="panel">
+          <div class="panel-head"><div><p class="eyebrow">Threat signal</p><h3>Severity distribution</h3></div></div>
+          <div id="threatBars" class="threat-bars"></div>
+        </article>
+      </div>
       <div class="grid-2">
-        <article class="panel"><div class="panel-head"><div><p class="eyebrow">Policy summary</p><h3>Recent rules</h3></div><button class="link-btn" data-go="rules">Manage</button></div><div id="recentRules" class="list"></div></article>
+        <article class="panel"><div class="panel-head"><div><p class="eyebrow">Threat center</p><h3>Recent security events</h3></div><button class="link-btn" data-go="threats">Open</button></div><div id="recentThreats" class="list"></div></article>
         <article class="panel"><div class="panel-head"><div><p class="eyebrow">Activity</p><h3>Recent changes</h3></div><button class="link-btn" data-go="history">View all</button></div><div id="recentHistory" class="list"></div></article>
       </div>
+    </section>
+
+    <section class="page" data-panel="devices">
+      <div class="section-head"><div><p class="eyebrow">Network access control</p><h2>Connected Devices</h2><p>Track IP/MAC identity, ownership, and policy state. Real ARP discovery and block enforcement require the local Windows engine.</p></div><button class="btn primary" id="discoverBtn">Simulate discovery</button></div>
+      <div class="toolbar"><input id="deviceSearch" placeholder="Search hostname, IP, MAC, owner..."><select id="deviceStatusFilter"><option value="">All states</option><option>Allowed</option><option>Blocked</option><option>Unknown</option></select></div>
+      <article class="panel"><div class="table-wrap"><table><thead><tr><th>Device</th><th>IP</th><th>MAC</th><th>Owner</th><th>Status</th><th>Last Seen</th><th></th></tr></thead><tbody id="deviceTable"></tbody></table></div></article>
     </section>
 
     <section class="page" data-panel="network">
@@ -105,18 +128,35 @@
       </article>
     </section>
 
+    <section class="page" data-panel="threats">
+      <div class="section-head"><div><p class="eyebrow">Security events</p><h2>Threat Center</h2><p>Review suspicious traffic, policy hits, bypass attempts, and device anomalies with severity and response state.</p></div><button class="btn secondary" id="generateThreatBtn">Generate sample event</button></div>
+      <div class="threat-summary" id="threatSummary"></div>
+      <article class="panel"><div id="threatList" class="threat-list"></div></article>
+    </section>
+
+    <section class="page" data-panel="traffic">
+      <div class="section-head"><div><p class="eyebrow">Network telemetry</p><h2>Traffic Analytics</h2><p>Visualize throughput, protocol distribution, and top destinations. Live counters require the local Windows host.</p></div><button class="btn secondary" id="sampleTrafficBtn">Sample traffic</button></div>
+      <div id="trafficKpis" class="traffic-kpis"></div>
+      <div class="grid-2">
+        <article class="panel visual-wide"><div class="panel-head"><div><h3>Throughput history</h3><p>Recent demo samples in Mbps.</p></div></div><svg class="traffic-chart" viewBox="0 0 760 250"><g class="chart-grid"><line x1="45" y1="30" x2="742" y2="30"/><line x1="45" y1="84" x2="742" y2="84"/><line x1="45" y1="138" x2="742" y2="138"/><line x1="45" y1="192" x2="742" y2="192"/><line x1="45" y1="232" x2="742" y2="232"/></g><polyline id="uploadLineLarge" class="traffic-line upload" points=""></polyline><polyline id="downloadLineLarge" class="traffic-line download" points=""></polyline></svg></article>
+        <article class="panel"><div class="panel-head"><div><h3>Protocol mix</h3><p>Current modeled traffic distribution.</p></div></div><div id="protocolMix" class="protocol-mix"></div></article>
+      </div>
+      <article class="panel"><div class="panel-head"><div><h3>Top destinations</h3><p>Representative destinations from the demo workspace.</p></div></div><div id="topDestinations" class="list"></div></article>
+    </section>
+
     <section class="page" data-panel="history">
       <div class="section-head"><div><p class="eyebrow">Audit trail</p><h2>Workspace History</h2><p>Every local policy edit is recorded in browser storage.</p></div><button class="btn secondary" id="clearHistoryBtn">Clear history</button></div>
       <article class="panel"><div id="historyList" class="list history-list"></div></article>
     </section>
 
     <section class="page" data-panel="settings">
-      <div class="section-head"><div><p class="eyebrow">Configuration</p><h2>Browser & Local Engine</h2><p>Browser settings persist locally. Windows-only enforcement settings become operational when using the local backend.</p></div></div>
+      <div class="section-head"><div><p class="eyebrow">Windows enforcement</p><h2>Engine & Settings</h2><p>The public workspace is safe for portfolio use. Actual packet enforcement stays on the local Windows host through WinDivert, Windows Firewall, ARP, DNS filtering, and SQLite.</p></div></div>
       <div class="grid-2">
         <article class="panel">
           <div class="panel-head"><div><h3>Policy settings</h3><p>Saved in this browser workspace.</p></div></div>
           <label class="toggle-row"><input id="quicToggle" type="checkbox"><span><strong>Disable QUIC policy</strong><small>Plan UDP/443 blocking for SNI visibility.</small></span></label>
           <label class="toggle-row"><input id="dohToggle" type="checkbox"><span><strong>Block known DoH endpoints</strong><small>Plan DNS-bypass reduction.</small></span></label>
+          <label class="toggle-row"><input id="ipBlockToggle" type="checkbox"><span><strong>Enable IP blocking</strong><small>Maintain resolved and manual IP enforcement.</small></span></label>
           <label class="field"><span>Temporary domain-IP TTL (seconds)</span><input id="ttlInput" type="number" min="30" max="86400"></label>
           <button class="btn primary" id="saveSettingsBtn">Save settings</button>
         </article>
