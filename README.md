@@ -1,4 +1,28 @@
-# PyreWall Web
+# PyreWall Web — Browser Remake of the Original PyreWall NGFW
+
+**Source of truth:** the original Windows/PyQt6 application in `Sachibara/Pyrewall`.
+
+PyreWall Web is not a separate replacement product. It is a browser remake and local web control interface for the original PyreWall application. The desktop app's layout, navigation, controls, terminology, and workflows are the design baseline.
+
+The remake mirrors the original:
+
+- split **Admin Login Page**
+- **Pyrewall NGFW** header with firewall status
+- **Start Firewall**, **Stop Firewall**, and **Logout**
+- **📊 Overview**
+- **🔧 Network Control**
+- **🚨 Threats**
+- **🛡️ Firewall Rules**
+- **📜 History**
+- **⚙️ Settings**
+- **👥 User Management** for admins
+- original Overview card arrangement
+- four-quadrant Network Control layout for Website Blocking, Traffic, Devices, and Application Signatures
+
+When run locally on Windows, the Flask console uses the real PyreWall backend APIs for WinDivert, Windows Firewall, ARP/device control, filtering, SQLite data, history, settings, backups, and users. The public portfolio copy uses safe browser-demo state while preserving the original application's interface and workflows.
+
+---
+
 
 PyreWall Web is the browser-based edition of PyreWall, separated from the original PyQt6 desktop project.
 

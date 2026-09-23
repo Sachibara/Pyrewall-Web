@@ -38,6 +38,7 @@ if "pyrewall" not in sys.modules:
 
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 
+from pyrewall.core.device_identify import lookup_oui
 from pyrewall.core.devices import (
     add_blocked_device,
     detect_devices,
@@ -305,7 +306,7 @@ def security_headers(response):
         "default-src 'self'; "
         "style-src 'self' 'unsafe-inline'; "
         "script-src 'self'; "
-        "img-src 'self' data:; "
+        "img-src 'self' data: https://raw.githubusercontent.com; "
         "connect-src 'self'; "
         "frame-ancestors 'none'"
     )
@@ -676,10 +677,31 @@ def api_devices():
     seen = set()
     for ip, mac in detected:
         seen.add(ip)
-        devices.append({"ip": ip, "mac": mac, "blocked": ip in blocked})
+        vendor = lookup_oui(mac) or "Unknown"
+        v = vendor.upper()
+        if "APPLE" in v:
+            device_type = "iPhone / Mac"
+        elif any(name in v for name in ("SAMSUNG", "XIAOMI", "OPPO", "VIVO", "REALME", "TECNO", "INFINIX", "POCO")):
+            device_type = "Android Phone"
+        else:
+            device_type = "Unknown Device"
+        devices.append({
+            "ip": ip,
+            "mac": mac,
+            "vendor": vendor,
+            "device_type": device_type,
+            "blocked": ip in blocked,
+        })
     for ip, mac in blocked.items():
         if ip not in seen:
-            devices.append({"ip": ip, "mac": mac, "blocked": True})
+            vendor = lookup_oui(mac) or "Unknown"
+            devices.append({
+                "ip": ip,
+                "mac": mac,
+                "vendor": vendor,
+                "device_type": "Unknown Device",
+                "blocked": True,
+            })
     return ok(devices=devices)
 
 
@@ -802,6 +824,9 @@ def api_clear_threats():
 @login_required
 def api_history():
     search = request.args.get("search", "").strip()
+    order = request.args.get("order", "desc").strip().lower()
+    if order not in {"asc", "desc"}:
+        order = "desc"
     try:
         limit = min(500, max(1, int(request.args.get("limit", "200"))))
     except ValueError:
@@ -813,12 +838,38 @@ def api_history():
         like = f"%{search}%"
         query += " WHERE username LIKE ? OR action LIKE ? OR description LIKE ? OR timestamp LIKE ?"
         params.extend([like, like, like, like])
-    query += " ORDER BY id DESC LIMIT ?"
+    query += " ORDER BY id " + ("ASC" if order == "asc" else "DESC") + " LIMIT ?"
     params.append(limit)
 
     with db(GENERAL_HISTORY_DB) as conn:
         rows = conn.execute(query, params).fetchall()
     return ok(history=[dict(row) for row in rows])
+
+
+
+@app.post("/api/history/archive")
+@admin_required
+def api_history_archive():
+    with db(GENERAL_HISTORY_DB) as conn:
+        rows = conn.execute(
+            """SELECT id, username, action, description, timestamp
+               FROM history
+               WHERE datetime(timestamp) < datetime('now', '-1 minute')
+               ORDER BY id"""
+        ).fetchall()
+        if not rows:
+            return ok(archived=0)
+        for row in rows:
+            conn.execute(
+                """INSERT INTO archived_history(orig_id, username, action, description, timestamp)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (row["id"], row["username"], row["action"], row["description"], row["timestamp"]),
+            )
+        ids = [row["id"] for row in rows]
+        placeholders = ",".join("?" for _ in ids)
+        conn.execute(f"DELETE FROM history WHERE id IN ({placeholders})", ids)
+    log_general_history(current_user(), "Archive Logs", f"Archived {len(rows)} log(s)")
+    return ok(archived=len(rows))
 
 
 @app.get("/api/settings")
@@ -841,6 +892,41 @@ def api_settings_put():
     notify_firewall_reload()
     log_general_history(current_user(), "Update Settings", json.dumps(settings, sort_keys=True))
     return ok(settings=settings, autostart={"ok": auto_ok, "message": auto_message})
+
+
+
+@app.post("/api/settings/reset")
+@admin_required
+def api_settings_reset():
+    settings = DEFAULT_SETTINGS.copy()
+    save_settings_file(settings)
+    apply_runtime_settings(settings)
+    set_autostart(False)
+    notify_firewall_reload()
+    log_general_history(current_user(), "Reset Settings", "Reset application settings to defaults")
+    return ok(settings=settings)
+
+
+@app.post("/api/firewall/reload")
+@admin_required
+def api_firewall_reload():
+    notify_firewall_reload()
+    log_general_history(current_user(), "Reload Firewall Lists", "Reload requested from web console")
+    return ok()
+
+
+@app.post("/api/open-db-folder")
+@admin_required
+def api_open_db_folder():
+    folder = os.path.abspath(os.path.dirname(str(FIREWALL_DB)))
+    if os.name != "nt":
+        return fail("Open DB Folder is only supported on Windows.", 409)
+    try:
+        os.startfile(folder)
+    except Exception as exc:
+        return fail(str(exc), 500)
+    log_general_history(current_user(), "Open DB Folder", folder)
+    return ok(folder=folder)
 
 
 @app.post("/api/backup")
